@@ -10,6 +10,6 @@ assert ENV_ID in ENV_POSSIBLE_OPTIONS, (
     f"Set correct TENGRI_ENV_ID env var. Possible options: {ENV_POSSIBLE_OPTIONS}"
 )
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings.base")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"settings.env.{ENV_ID}")
 
 application = get_asgi_application()

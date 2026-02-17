@@ -18,6 +18,7 @@ Apps
 """
 
 DJANGO_AND_THIRD_PARTY_APPS = [
+    "unfold",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -27,7 +28,6 @@ DJANGO_AND_THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
-
 ]
 
 PROJECT_APPS = [
@@ -167,6 +167,16 @@ TEMPLATES = [
         },
     },
 ]
+
+"""
+Unfold configuration
+"""
+
+UNFOLD = {
+    "SITE_TITLE": "Tengri News Admin Panel",
+    "SITE_HEADER": "Tengri News Admin Panel",
+    "SITE_SYMBOL": "dashboard",
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
