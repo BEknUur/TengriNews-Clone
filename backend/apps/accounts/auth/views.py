@@ -16,11 +16,13 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 
 # Project modules
 from apps.accounts.auth.serializers import RegistrationSerializer, LoginSerializer
+from apps.abstract.decorators import validate_serializer_data
+from apps.abstract.mixins import DRFResponseMixin
 
 logger = logging.getLogger(__name__)
 
 
-class AuthViewSet(ViewSet):
+class AuthViewSet(DRFResponseMixin, ViewSet):
     """
     ViewSet for Authentication
     """
@@ -33,6 +35,7 @@ class AuthViewSet(ViewSet):
         url_path="token",
         url_name="token",
     )
+    @validate_serializer_data(serializer_class=LoginSerializer)
     def login(
         self,
         request: DRFRequest,
@@ -41,23 +44,10 @@ class AuthViewSet(ViewSet):
     ) -> DRFResponse:
         email = request.data.get("email", "N/A")
         logger.info(f"Login attempt: email={email}")
-
-        serializer = LoginSerializer(
-            data=request.data,
-            context={"request": request},
-        )
-
-        if serializer.is_valid():
-            logger.info(f"Login successful: email={email}")
-            return DRFResponse(
-                data=serializer.validated_data,
-                status=HTTP_200_OK,
-            )
-
-        logger.warning(f"Login failed: email={email}, errors={serializer.errors}")
+        logger.info(f"Login successful: email={email}")
         return DRFResponse(
-            data=serializer.errors,
-            status=HTTP_400_BAD_REQUEST,
+            data=kwargs["validated_data"],
+            status=HTTP_200_OK,
         )
 
     @action(
@@ -66,6 +56,7 @@ class AuthViewSet(ViewSet):
         url_path="register",
         url_name="register",
     )
+    @validate_serializer_data(serializer_class=RegistrationSerializer)
     def register(
         self,
         request: DRFRequest,
@@ -74,25 +65,14 @@ class AuthViewSet(ViewSet):
     ) -> DRFResponse:
         email = request.data.get("email", "N/A")
         logger.info(f"Registration attempt: email={email}")
-
-        serializer: RegistrationSerializer = RegistrationSerializer(
-            data=request.data,
-            context={"request": request},
-        )
-
-        if serializer.is_valid():
-            user = serializer.save()
-            logger.info(f"Registration successful: user_id={user.id}, email={email}")
-            return DRFResponse(
-                data=serializer.data,
-                status=HTTP_201_CREATED,
-            )
-        logger.warning(
-            f"Registration failed: email={email}, errors={serializer.errors}"
-        )
-        return DRFResponse(
-            data=serializer.errors,
-            status=HTTP_400_BAD_REQUEST,
+        serializer: RegistrationSerializer = kwargs["serializer"]
+        user = serializer.save()
+        logger.info(f"Registration successful: user_id={user.id}, email={email}")
+        return self.get_drf_response(
+            request=request,
+            data=user,
+            serializer_class=RegistrationSerializer,
+            status_code=HTTP_201_CREATED,
         )
 
     @action(
