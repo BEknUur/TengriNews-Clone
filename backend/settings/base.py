@@ -31,6 +31,7 @@ DJANGO_AND_THIRD_PARTY_APPS = [
     "django_filters",
     "drf_spectacular",
     "corsheaders",
+    "django_extensions",
 ]
 
 PROJECT_APPS = [
