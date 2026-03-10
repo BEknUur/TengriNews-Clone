@@ -19,6 +19,9 @@ from apps.accounts.manager import CustomUserManager
 # Constants
 FIRST_NAME_MAX_LENGTH = 50
 LAST_NAME_MAX_LENGTH = 50
+ROLE_MAX_LENGTH = 50
+
+
 
 
 class CustomUser(
@@ -36,6 +39,7 @@ class CustomUser(
 
         - first_name: CharField
         - last_name: CharField
+        - role:CharField
 
         - is_active: BooleanField
         - is_staff: BooleanField
@@ -52,6 +56,17 @@ class CustomUser(
         - __str__: Return a string representation of the user
     """
 
+    ADMIN="ADMIN"
+    USER="USER"
+    EDITOR="EDITOR"
+
+    ROLE_CHOICES = [
+        (ADMIN, "ADMIN"),
+        (USER, "USER"),
+        (EDITOR, "EDITOR"),
+    ]
+
+
     email = EmailField(
         unique=True,
     )
@@ -61,6 +76,11 @@ class CustomUser(
     )
     last_name = CharField(
         max_length=LAST_NAME_MAX_LENGTH,
+    )
+    role = CharField(
+        max_length=ROLE_MAX_LENGTH,
+        choices=ROLE_CHOICES,
+        default=USER,
     )
 
     is_active = BooleanField(
