@@ -22,11 +22,13 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
         "email",
         "first_name",
         "last_name",
+        "role",
         "is_active",
         "is_staff",
+        "created_at",
     )
 
-    list_filter = ("is_active", "is_staff")
+    list_filter = ("is_active", "is_staff","role")
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)
 
@@ -38,6 +40,7 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
                 "fields": (
                     ("first_name", "last_name"),
                     "avatar",
+                    "role",
                 )
             },
         ),
@@ -72,6 +75,7 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
                     "email",
                     "first_name",
                     "last_name",
+                    "role",
                     "password1",
                     "password2",
                 ),
