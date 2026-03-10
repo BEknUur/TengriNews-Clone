@@ -3,6 +3,8 @@ from typing import Any
 import logging
 
 # Third-party modules
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import AutoSchema as SpectacularAutoSchema
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response as DRFResponse
@@ -29,6 +31,7 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(request=LoginSerializer, responses={200: LoginSerializer})
     @action(
         methods=("POST",),
         detail=False,
@@ -50,6 +53,7 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
             status=HTTP_200_OK,
         )
 
+    @extend_schema(request=RegistrationSerializer, responses={201: RegistrationSerializer})
     @action(
         methods=("POST",),
         detail=False,
@@ -75,6 +79,7 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
             status_code=HTTP_201_CREATED,
         )
 
+    @extend_schema(request=TokenRefreshSerializer, responses={200: TokenRefreshSerializer})
     @action(
         methods=("POST",),
         detail=False,

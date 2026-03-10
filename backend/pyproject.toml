@@ -18,4 +18,12 @@ dependencies = [
     "psycopg2-binary>=2.9.11",
     "python-decouple>=3.8",
     "whitenoise>=6.11.0",
+    "pytest>=8.0",
+    "pytest-django>=4.9",
 ]
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "settings.env.local"
+pythonpath = ["."]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
