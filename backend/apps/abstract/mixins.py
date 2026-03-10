@@ -15,7 +15,7 @@ from rest_framework.status import HTTP_200_OK
 
 
 class DRFResponseMixin:
-    # Purpose: centralize repeated DRF response + optional pagination logic.
+    """Mixin to get DRF response."""
     def get_drf_response(
         self,
         request: DRFRequest,
@@ -26,7 +26,8 @@ class DRFResponseMixin:
         serializer_context: Optional[dict[str, Any]] = None,
         status_code: int = HTTP_200_OK,
     ) -> DRFResponse:
-        if serializer_context is None:
+        """Get DRF response with optional pagination."""
+        if not serializer_context:
             serializer_context = {'request': request}
 
         if paginator and many:
@@ -45,12 +46,13 @@ class DRFResponseMixin:
 
 
 class ModelInstanceMixin:
-    # Purpose: safely fetch one model object and return None if it does not exist.
+    """Mixin to get model instance."""
     def get_model_instance(
         self,
         model: Type[Model],
         **kwargs: dict[str, Any],
     ) -> Optional[Model]:
+        """Get model instance or None."""
         try:
             return model.objects.get(**kwargs)
         except model.DoesNotExist:

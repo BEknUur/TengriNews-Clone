@@ -2,6 +2,10 @@
 from decouple import config
 
 
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 200
+
+
 ENV_POSSIBLE_OPTIONS = (
     "local",
     "prod",

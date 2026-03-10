@@ -28,13 +28,15 @@ DJANGO_AND_THIRD_PARTY_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
+    "django_filters",
+    "drf_spectacular",
     "corsheaders",
 ]
 
 PROJECT_APPS = [
-    "apps.abstract",
-    "apps.main",
-    "apps.accounts",
+    "apps.abstract.apps.AbstractConfig",
+    "apps.main.apps.MainConfig",
+    "apps.accounts.apps.AccountsConfig",
 ]
 
 INSTALLED_APPS = DJANGO_AND_THIRD_PARTY_APPS + PROJECT_APPS

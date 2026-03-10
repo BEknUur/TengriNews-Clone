@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from apps.abstract.models import AbstractTimeStamptModel
 
 class Category(AbstractTimeStamptModel):
+    """Category database (table) model."""
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, unique=True)
     parent = models.ForeignKey(
@@ -20,18 +21,28 @@ class Category(AbstractTimeStamptModel):
 
     def __str__(self):
         return self.name
+
+    def __repr__(self) -> str:
+        return f"Category(id={self.pk}, name={self.name})"
     
 class Tag(AbstractTimeStamptModel):
+    """Tag database (table) model."""
+
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, unique=True)
 
     class Meta:
         ordering = ["name"]
 
+
     def __str__(self):
         return self.name
+
+    def __repr__(self) -> str:
+        return f"Tag(id={self.pk}, name={self.name})"
     
 class Article(AbstractTimeStamptModel):
+    """Article database (table) model."""
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     excerpt = models.TextField(blank=True)
@@ -48,8 +59,10 @@ class Article(AbstractTimeStamptModel):
     view_count = models.PositiveIntegerField(default=0)
 
     class Meta:
-        ordering = ["-published_at", "-created_at"]
-        indexes = [models.Index(fields=["slug"]), models.Index(fields=["-published_at"])]
+        ordering = ["-published_at", "-id"]
+        indexes = [
+        models.Index(fields=["published_at", "id"]),
+    ]
 
     def save(self, *args, **kwargs):
         if self.is_published and self.published_at is None:
@@ -58,8 +71,12 @@ class Article(AbstractTimeStamptModel):
 
     def __str__(self):
         return self.title
+
+    def __repr__(self) -> str:
+        return f"Article(id={self.pk}, title={self.title})"
     
 class Comment(AbstractTimeStamptModel):
+    """Comment database (table) model."""
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="comments")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="comments"
@@ -79,9 +96,13 @@ class Comment(AbstractTimeStamptModel):
         
     def __str__(self):
         return f"Comment by {self.pk} on {self.user}"
+
+    def __repr__(self) -> str:
+        return f"Comment(id={self.pk}, user={self.user})"
     
 
 class Reaction(AbstractTimeStamptModel):
+    """Reaction database (table) model."""
     LIKE = "like"
     DISLIKE = "dislike"
     LOVE = "love"
@@ -106,10 +127,12 @@ class Reaction(AbstractTimeStamptModel):
         ]
 
     def clean(self):
-        # exactly one target must be set (article xor comment)
         if bool(self.article) == bool(self.comment):
             raise ValidationError("Reaction must be attached to exactly one of article or comment")
 
     def __str__(self):
         target = self.article or self.comment
         return f"Reaction {self.type} by {self.user} on {target}"
+
+    def __repr__(self) -> str:
+        return f"Reaction(id={self.pk}, type={self.type}, user={self.user})"
