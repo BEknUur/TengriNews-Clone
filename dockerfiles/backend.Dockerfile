@@ -4,12 +4,18 @@ WORKDIR /backend
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-COPY ../backend/pyproject.toml ./
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    graphviz \
+    libgraphviz-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY ./backend/pyproject.toml ./
+COPY ./backend .
 
 RUN uv pip install --system --no-cache . \
     && rm -rf /root/.cache
-
-COPY ./backend .
 
 EXPOSE 8000
 
