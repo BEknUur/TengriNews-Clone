@@ -1,18 +1,24 @@
+"""Views for content domain endpoints (categories, tags, articles, comments, reactions)."""
+
 # Python modules
 from typing import Any
-from django.db.models import QuerySet
-from django.db import transaction
 
-from rest_framework import status, filters
+# Django modules
+from django.db import transaction
+from django.db.models import QuerySet
+
+# Third-party modules
+from rest_framework import filters, serializers, status
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
 from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response as DRFResponse
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from drf_spectacular.types import OpenApiTypes
 
+# Project modules
 from apps.abstract.mixins import DRFResponseMixin
 from apps.abstract.pagination_selector import get_paginator
 from apps.main.models import Category, Tag, Article, Comment, Reaction
@@ -25,6 +31,28 @@ from apps.main.serializers import (
     CommentSerializer,
     CommentCreateSerializer,
     ReactionSerializer,
+)
+from apps.main.schema_serializers import (
+    ArticleCommentCreateRequestSerializer as ArticleCommentCreateRequestSchemaSerializer,
+    ArticleCreateRequestSerializer as ArticleCreateRequestSchemaSerializer,
+    ArticleDetailItemSerializer as ArticleDetailItemSchemaSerializer,
+    ArticleListResponseSerializer as ArticleListResponseSchemaSerializer,
+    ArticlePatchRequestSerializer as ArticlePatchRequestSchemaSerializer,
+    ArticleReactionCreateRequestSerializer as ArticleReactionCreateRequestSchemaSerializer,
+    ArticleViewCountResponseSerializer as ArticleViewCountResponseSchemaSerializer,
+    ArticleWriteResponseSerializer as ArticleWriteResponseSchemaSerializer,
+    CategoryCreateRequestSerializer as CategoryCreateRequestSchemaSerializer,
+    CategoryPatchRequestSerializer as CategoryPatchRequestSchemaSerializer,
+    CategoryResponseSerializer as CategoryResponseSchemaSerializer,
+    CommentCreateRequestSerializer as CommentCreateRequestSchemaSerializer,
+    CommentPatchRequestSerializer as CommentPatchRequestSchemaSerializer,
+    CommentResponseSerializer as CommentResponseSchemaSerializer,
+    IdErrorSerializer as IdErrorSchemaSerializer,
+    ReactionCreateRequestSerializer as ReactionCreateRequestSchemaSerializer,
+    ReactionResponseSerializer as ReactionResponseSchemaSerializer,
+    TagCreateRequestSerializer as TagCreateRequestSchemaSerializer,
+    TagPatchRequestSerializer as TagPatchRequestSchemaSerializer,
+    TagResponseSerializer as TagResponseSchemaSerializer,
 )
 from apps.main.tasks import process_article_content_task
 from apps.main.permissions import (
@@ -39,19 +67,29 @@ class CategoryViewSet(ViewSet):
 
     queryset = Category.objects
 
-    def get_permissions(self) -> list:
+    def get_permissions(self) -> list[BasePermission]:
+        """Return permissions depending on the current action."""
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
         return [IsAdminOnly()]
 
-    @extend_schema(responses=CategorySerializer(many=True))
+    @extend_schema(
+        request=None,
+        responses={status.HTTP_200_OK: CategoryResponseSchemaSerializer(many=True)},
+    )
     def list(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Handle GET /categories/ — return all categories."""
         categories: QuerySet = self.queryset.all().order_by("name")
         serializer: CategorySerializer = CategorySerializer(categories, many=True)
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(responses=CategorySerializer)
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_200_OK: CategoryResponseSchemaSerializer,
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def retrieve(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -66,7 +104,13 @@ class CategoryViewSet(ViewSet):
         serializer: CategorySerializer = CategorySerializer(category)
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(request=CategorySerializer, responses=CategorySerializer)
+    @extend_schema(
+        request=CategoryCreateRequestSchemaSerializer,
+        responses={
+            status.HTTP_201_CREATED: CategoryResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+        },
+    )
     def create(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Handle POST /categories/ — create new category."""
         serializer: CategorySerializer = CategorySerializer(data=request.data)
@@ -75,7 +119,14 @@ class CategoryViewSet(ViewSet):
 
         return DRFResponse(data=serializer.data, status=status.HTTP_201_CREATED)
 
-    @extend_schema(request=CategorySerializer, responses=CategorySerializer)
+    @extend_schema(
+        request=CategoryPatchRequestSchemaSerializer,
+        responses={
+            status.HTTP_200_OK: CategoryResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def partial_update(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -94,7 +145,13 @@ class CategoryViewSet(ViewSet):
         serializer.save()
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(responses={204: None})
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_204_NO_CONTENT: OpenApiResponse(description="Category deleted"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def destroy(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -115,19 +172,29 @@ class TagViewSet(ViewSet):
 
     queryset = Tag.objects
 
-    def get_permissions(self) -> list:
+    def get_permissions(self) -> list[BasePermission]:
+        """Return permissions depending on the current action."""
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
         return [IsAdminOnly()]
 
-    @extend_schema(responses=TagSerializer(many=True))
+    @extend_schema(
+        request=None,
+        responses={status.HTTP_200_OK: TagResponseSchemaSerializer(many=True)},
+    )
     def list(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Handle GET /tags/ — return all tags."""
         tags: QuerySet = self.queryset.all().order_by("name")
         serializer: TagSerializer = TagSerializer(tags, many=True)
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(responses=TagSerializer)
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_200_OK: TagResponseSchemaSerializer,
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def retrieve(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -142,7 +209,13 @@ class TagViewSet(ViewSet):
         serializer: TagSerializer = TagSerializer(tag)
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(request=TagSerializer, responses=TagSerializer)
+    @extend_schema(
+        request=TagCreateRequestSchemaSerializer,
+        responses={
+            status.HTTP_201_CREATED: TagResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+        },
+    )
     def create(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Handle POST /tags/ — create new tag."""
         serializer: TagSerializer = TagSerializer(data=request.data)
@@ -150,7 +223,14 @@ class TagViewSet(ViewSet):
         serializer.save()
         return DRFResponse(data=serializer.data, status=status.HTTP_201_CREATED)
 
-    @extend_schema(request=TagSerializer, responses=TagSerializer)
+    @extend_schema(
+        request=TagPatchRequestSchemaSerializer,
+        responses={
+            status.HTTP_200_OK: TagResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def partial_update(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -167,7 +247,13 @@ class TagViewSet(ViewSet):
         serializer.save()
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(responses={204: None})
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_204_NO_CONTENT: OpenApiResponse(description="Tag deleted"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def destroy(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -187,6 +273,7 @@ class ArticleViewSet(DRFResponseMixin, ViewSet):
     """ViewSet for handling Article-related endpoints."""
 
     queryset = Article.objects
+    serializer_class = ArticleListSerializer
     filter_backends = (
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -197,15 +284,29 @@ class ArticleViewSet(DRFResponseMixin, ViewSet):
     ordering_fields = ("published_at", "view_count")
     ordering = ("-published_at", "-id")
 
-    def get_permissions(self) -> list:
+    def get_permissions(self) -> list[BasePermission]:
+        """Return permissions depending on the current action."""
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
         if self.action in ("partial_update", "destroy"):
             return [IsAuthorOrEditorOrAdmin()]
         return [IsAuthenticated()]
 
+    def get_serializer_class(self) -> type[serializers.ModelSerializer]:
+        """Return the serializer class matching the current action."""
+        if self.action == "retrieve":
+            return ArticleDetailSerializer
+        if self.action in ("create", "partial_update"):
+            return ArticleCreateUpdateSerializer
+        if self.action == "comments":
+            return CommentCreateSerializer
+        if self.action == "reactions":
+            return ReactionSerializer
+        return ArticleListSerializer
+
     @extend_schema(
-        responses=ArticleListSerializer(many=True),
+        request=None,
+        responses={status.HTTP_200_OK: ArticleListResponseSchemaSerializer},
         parameters=[
             OpenApiParameter(
                 "pagination", OpenApiTypes.STR, description="cursor | page | limit"
@@ -230,7 +331,13 @@ class ArticleViewSet(DRFResponseMixin, ViewSet):
             paginator=paginator,
         )
 
-    @extend_schema(responses=ArticleDetailSerializer)
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_200_OK: ArticleDetailItemSchemaSerializer,
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def retrieve(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -252,7 +359,11 @@ class ArticleViewSet(DRFResponseMixin, ViewSet):
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        request=ArticleCreateUpdateSerializer, responses=ArticleCreateUpdateSerializer
+        request=ArticleCreateRequestSchemaSerializer,
+        responses={
+            status.HTTP_201_CREATED: ArticleWriteResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+        },
     )
     def create(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Handle POST /articles/ — create new article."""
@@ -267,7 +378,12 @@ class ArticleViewSet(DRFResponseMixin, ViewSet):
         return DRFResponse(data=serializer.data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
-        request=ArticleCreateUpdateSerializer, responses=ArticleCreateUpdateSerializer
+        request=ArticlePatchRequestSchemaSerializer,
+        responses={
+            status.HTTP_200_OK: ArticleWriteResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
     )
     def partial_update(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
@@ -293,7 +409,13 @@ class ArticleViewSet(DRFResponseMixin, ViewSet):
 
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(responses={204: None})
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_204_NO_CONTENT: OpenApiResponse(description="Article deleted"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def destroy(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -314,6 +436,14 @@ class ArticleViewSet(DRFResponseMixin, ViewSet):
         methods=["post"],
         url_path="comments",
         permission_classes=[IsAuthenticated],
+    )
+    @extend_schema(
+        request=ArticleCommentCreateRequestSchemaSerializer,
+        responses={
+            status.HTTP_201_CREATED: CommentResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
     )
     def comments(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
@@ -344,6 +474,14 @@ class ArticleViewSet(DRFResponseMixin, ViewSet):
         url_path="reactions",
         permission_classes=[IsAuthenticated],
     )
+    @extend_schema(
+        request=ArticleReactionCreateRequestSchemaSerializer,
+        responses={
+            status.HTTP_201_CREATED: ReactionResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def reactions(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -370,6 +508,13 @@ class ArticleViewSet(DRFResponseMixin, ViewSet):
     @action(
         detail=True, methods=["post"], url_path="view", permission_classes=[AllowAny]
     )
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_200_OK: ArticleViewCountResponseSchemaSerializer,
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def view(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -394,21 +539,31 @@ class CommentViewSet(ViewSet):
 
     queryset = Comment.objects
 
-    def get_permissions(self) -> list:
+    def get_permissions(self) -> list[BasePermission]:
+        """Return permissions depending on the current action."""
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
         if self.action in ("partial_update", "destroy"):
             return [IsCommentAuthorOrAdmin()]
         return [IsAuthenticated()]
 
-    @extend_schema(responses=CommentSerializer(many=True))
+    @extend_schema(
+        request=None,
+        responses={status.HTTP_200_OK: CommentResponseSchemaSerializer(many=True)},
+    )
     def list(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Handle GET /comments/ — return all comments."""
         comments: QuerySet = self.queryset.all().select_related("user", "article")
         serializer: CommentSerializer = CommentSerializer(comments, many=True)
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(responses=CommentSerializer)
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_200_OK: CommentResponseSchemaSerializer,
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def retrieve(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -425,7 +580,13 @@ class CommentViewSet(ViewSet):
         serializer: CommentSerializer = CommentSerializer(comment)
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(request=CommentCreateSerializer, responses=CommentSerializer)
+    @extend_schema(
+        request=CommentCreateRequestSchemaSerializer,
+        responses={
+            status.HTTP_201_CREATED: CommentCreateRequestSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+        },
+    )
     def create(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Handle POST /comments/ — create new comment."""
         serializer: CommentCreateSerializer = CommentCreateSerializer(
@@ -435,7 +596,14 @@ class CommentViewSet(ViewSet):
         serializer.save()
         return DRFResponse(data=serializer.data, status=status.HTTP_201_CREATED)
 
-    @extend_schema(request=CommentSerializer, responses=CommentSerializer)
+    @extend_schema(
+        request=CommentPatchRequestSchemaSerializer,
+        responses={
+            status.HTTP_200_OK: CommentResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def partial_update(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -455,7 +623,13 @@ class CommentViewSet(ViewSet):
         serializer.save()
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(responses={204: None})
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_204_NO_CONTENT: OpenApiResponse(description="Comment deleted"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def destroy(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -477,12 +651,16 @@ class ReactionViewSet(ViewSet):
 
     queryset = Reaction.objects
 
-    def get_permissions(self) -> list:
+    def get_permissions(self) -> list[BasePermission]:
+        """Return permissions depending on the current action."""
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
         return [IsAuthenticated()]
 
-    @extend_schema(responses=ReactionSerializer(many=True))
+    @extend_schema(
+        request=None,
+        responses={status.HTTP_200_OK: ReactionResponseSchemaSerializer(many=True)},
+    )
     def list(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Handle GET /reactions/ — return all reactions."""
         reactions: QuerySet = self.queryset.all().select_related(
@@ -491,7 +669,13 @@ class ReactionViewSet(ViewSet):
         serializer: ReactionSerializer = ReactionSerializer(reactions, many=True)
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(responses=ReactionSerializer)
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_200_OK: ReactionResponseSchemaSerializer,
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def retrieve(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
@@ -508,7 +692,13 @@ class ReactionViewSet(ViewSet):
         serializer: ReactionSerializer = ReactionSerializer(reaction)
         return DRFResponse(data=serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(request=ReactionSerializer, responses=ReactionSerializer)
+    @extend_schema(
+        request=ReactionCreateRequestSchemaSerializer,
+        responses={
+            status.HTTP_201_CREATED: ReactionResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+        },
+    )
     def create(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Handle POST /reactions/ — create new reaction."""
         serializer: ReactionSerializer = ReactionSerializer(
@@ -518,7 +708,13 @@ class ReactionViewSet(ViewSet):
         serializer.save()
         return DRFResponse(data=serializer.data, status=status.HTTP_201_CREATED)
 
-    @extend_schema(responses={204: None})
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_204_NO_CONTENT: OpenApiResponse(description="Reaction deleted"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
     def destroy(
         self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
     ) -> DRFResponse:
