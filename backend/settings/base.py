@@ -174,6 +174,15 @@ TEMPLATES = [
 ]
 
 """
+Celery configuration
+"""
+
+
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"  # noqa: F405
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+
+"""
 Unfold configuration
 """
 

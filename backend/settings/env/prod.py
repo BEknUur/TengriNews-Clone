@@ -1,5 +1,5 @@
 # Project modules
-from settings.conf import POSTGRESQL_URL
+from settings.conf import POSTGRESQL_URL, REDIS_HOST, REDIS_PORT, REDIS_DB
 from settings.base import *  # noqa F401
 
 # Third-party modules
@@ -25,3 +25,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+# Caching configuration
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}

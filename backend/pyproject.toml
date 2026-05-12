@@ -22,7 +22,10 @@ dependencies = [
     "pytest-django>=4.9",
     "faker>=24.0.0",
     "django-extensions>=3.2.0",
-    "pygraphviz==1.14",
+    "pygraphviz>=1.14",
+    "redis>=7.4.0",
+    "django-redis>=6.0.0",
+    "celery>=5.6.3",
 ]
 [tool.setuptools]
 packages = ["apps", "settings"]

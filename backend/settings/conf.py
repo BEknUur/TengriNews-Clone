@@ -24,3 +24,7 @@ SECRET_KEY = config(
     default="django-insecure-b@wp(sggy#_@61*7gxq5-yxu)y54&t1w#f*f2dbkq(f0kc=1qo",
     cast=str,
 )
+
+REDIS_HOST = config("REDIS_HOST", default="localhost", cast=str)
+REDIS_PORT = config("REDIS_PORT", default=6379, cast=int)
+REDIS_DB = config("REDIS_DB", default=0, cast=int)
