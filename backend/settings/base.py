@@ -138,6 +138,17 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_TROTTLE_CLASSES": [
+        "apps.abstract.trottling.CustomAnonRateThrottle",
+        "apps.abstract.trottling.CustomUserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_TROTTLE_RATES": {
+        "anon": "100/hour",
+        "user": "1000/hour",
+        "auth_login": "5/minute",
+        "auth_register": "10/hour",
+    },
 }
 
 
@@ -173,14 +184,6 @@ TEMPLATES = [
     },
 ]
 
-"""
-Celery configuration
-"""
-
-
-CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"  # noqa: F405
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
 
 """
 Unfold configuration
@@ -216,6 +219,27 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
+
+
+"""
+Celery configuration
+"""
+
+
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"  # noqa: F405
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+
+CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"  # noqa: F405
+CELERY_RESULT_SERIALIZER = "json"
+
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_TASK_ACK_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+
+CELERY_BEAT_SCHEDULE = {}
 
 """
 Static | Media
