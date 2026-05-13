@@ -10,8 +10,8 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
-from rest_framework.request import Request
-from rest_framework.response import Response
+from rest_framework.request import Request as DRFRequest
+from rest_framework.response import Response as DRFResponse
 from rest_framework.viewsets import ViewSet
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
@@ -39,10 +39,10 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
     )
     @action(methods=["post"], detail=False, url_path="token", url_name="token")
     @validate_serializer_data(serializer_class=LoginSerializer)
-    def login(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    def login(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Authenticate a user and return access + refresh tokens."""
         logger.info("Login: email=%s", request.data.get("email", "N/A"))
-        return Response(data=kwargs["validated_data"], status=status.HTTP_200_OK)
+        return DRFResponse(data=kwargs["validated_data"], status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Register a new user",
@@ -55,7 +55,7 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
     )
     @action(methods=["post"], detail=False, url_path="register", url_name="register")
     @validate_serializer_data(serializer_class=RegistrationSerializer)
-    def register(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    def register(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Create a new user account and return JWT tokens."""
         serializer: RegistrationSerializer = kwargs["serializer"]
         user = serializer.save()
@@ -79,11 +79,11 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
     @action(
         methods=["post"], detail=False, url_path="token/refresh", url_name="refresh"
     )
-    def token_refresh(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    def token_refresh(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Exchange a valid refresh token for a new access token."""
         serializer = TokenRefreshSerializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+            return DRFResponse(serializer.validated_data, status=status.HTTP_200_OK)
         except TokenError as exc:
             raise InvalidToken(exc.args[0])

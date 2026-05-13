@@ -34,9 +34,9 @@ from apps.accounts.auth.schema_serializers import (
     RegisterResponseSerializer,
     TokenPairResponseSerializer,
 )
-from apps.abstract.decorators import validate_serializer_data
-from apps.abstract.mixins import DRFResponseMixin
-from apps.abstract.throttling import CustomAnonRateThrottle, CustomUserRateThrottle
+from apps.abstracts.decorators import validate_serializer_data
+from apps.abstracts.mixins import DRFResponseMixin
+from apps.abstracts.throttling import CustomAnonRateThrottle, CustomUserRateThrottle
 from apps.accounts.tasks import send_welcome_email_task
 
 logger = logging.getLogger(__name__)

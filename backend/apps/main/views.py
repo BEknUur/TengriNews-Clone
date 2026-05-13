@@ -1,63 +1,27 @@
-"""Views for content domain endpoints (categories, tags, articles, comments, reactions)."""
-
 """ViewSets for categories, tags, articles, comments, and reactions."""
+
 from __future__ import annotations
 
 # Python modules
 from typing import Any
 
 # Django modules
-from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import F
 
 # Third-party modules
-from rest_framework import filters, serializers, status
-from rest_framework.viewsets import ViewSet
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiResponse, extend_schema
+from rest_framework import filters, status
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response as DRFResponse
-from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from drf_spectacular.types import OpenApiTypes
+from rest_framework.viewsets import ViewSet
 
 # Project modules
-from apps.abstract.mixins import DRFResponseMixin
-from apps.abstract.pagination_selector import get_paginator
-from apps.main.models import Category, Tag, Article, Comment, Reaction
-from apps.main.serializers import (
-    CategorySerializer,
-    TagSerializer,
-    ArticleListSerializer,
-    ArticleDetailSerializer,
-    ArticleCreateUpdateSerializer,
-    CommentSerializer,
-    CommentCreateSerializer,
-    ReactionSerializer,
-)
-from apps.main.schema_serializers import (
-    ArticleCommentCreateRequestSerializer as ArticleCommentCreateRequestSchemaSerializer,
-    ArticleCreateRequestSerializer as ArticleCreateRequestSchemaSerializer,
-    ArticleDetailItemSerializer as ArticleDetailItemSchemaSerializer,
-    ArticleListResponseSerializer as ArticleListResponseSchemaSerializer,
-    ArticlePatchRequestSerializer as ArticlePatchRequestSchemaSerializer,
-    ArticleReactionCreateRequestSerializer as ArticleReactionCreateRequestSchemaSerializer,
-    ArticleViewCountResponseSerializer as ArticleViewCountResponseSchemaSerializer,
-    ArticleWriteResponseSerializer as ArticleWriteResponseSchemaSerializer,
-    CategoryCreateRequestSerializer as CategoryCreateRequestSchemaSerializer,
-    CategoryPatchRequestSerializer as CategoryPatchRequestSchemaSerializer,
-    CategoryResponseSerializer as CategoryResponseSchemaSerializer,
-    CommentCreateRequestSerializer as CommentCreateRequestSchemaSerializer,
-    CommentPatchRequestSerializer as CommentPatchRequestSchemaSerializer,
-    CommentResponseSerializer as CommentResponseSchemaSerializer,
-    IdErrorSerializer as IdErrorSchemaSerializer,
-    ReactionCreateRequestSerializer as ReactionCreateRequestSchemaSerializer,
-    ReactionResponseSerializer as ReactionResponseSchemaSerializer,
-    TagCreateRequestSerializer as TagCreateRequestSchemaSerializer,
-    TagPatchRequestSerializer as TagPatchRequestSchemaSerializer,
-    TagResponseSerializer as TagResponseSchemaSerializer,
-)
-from apps.main.tasks import process_article_content_task
+from apps.abstracts.mixins import DRFResponseMixin
+from apps.abstracts.pagination_selector import get_paginator
+from apps.main.models import Article, Category, Comment, Reaction, Tag
 from apps.main.permissions import (
     IsAdminOnly,
     IsAuthorOrEditorOrAdmin,
@@ -85,12 +49,10 @@ class CategoryViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def list(self, request: Request) -> Response:
+    def list(self, request: DRFRequest) -> DRFResponse:
         """Return all categories ordered by name."""
         qs = Category.objects.all()
-        return Response(
-            CategorySerializer(qs, many=True).data, status=status.HTTP_200_OK
-        )
+        return DRFResponse(CategorySerializer(qs, many=True).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Retrieve a category",
@@ -100,13 +62,13 @@ class CategoryViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def retrieve(self, request: Request, pk: str | None = None) -> Response:
+    def retrieve(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Return a single category by primary key."""
         try:
             obj = Category.objects.get(pk=pk)
         except Category.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(CategorySerializer(obj).data, status=status.HTTP_200_OK)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return DRFResponse(CategorySerializer(obj).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Create a category",
@@ -119,13 +81,13 @@ class CategoryViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def create(self, request: Request) -> Response:
+    def create(self, request: DRFRequest) -> DRFResponse:
         """Create a new category. Admin only."""
         IsAdminOnly().check_permission_or_deny(request)
         serializer = CategorySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return DRFResponse(serializer.data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         summary="Partially update a category",
@@ -139,17 +101,17 @@ class CategoryViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def partial_update(self, request: Request, pk: str | None = None) -> Response:
+    def partial_update(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Partially update an existing category. Admin only."""
         IsAdminOnly().check_permission_or_deny(request)
         try:
             obj = Category.objects.get(pk=pk)
         except Category.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = CategorySerializer(obj, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return DRFResponse(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Delete a category",
@@ -161,15 +123,15 @@ class CategoryViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def destroy(self, request: Request, pk: str | None = None) -> Response:
+    def destroy(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Delete a category. Admin only."""
         IsAdminOnly().check_permission_or_deny(request)
         try:
             obj = Category.objects.get(pk=pk)
         except Category.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return DRFResponse(status=status.HTTP_204_NO_CONTENT)
 
 
 class TagViewSet(ViewSet):
@@ -182,10 +144,10 @@ class TagViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def list(self, request: Request) -> Response:
+    def list(self, request: DRFRequest) -> DRFResponse:
         """Return all tags ordered by name."""
         qs = Tag.objects.all()
-        return Response(TagSerializer(qs, many=True).data, status=status.HTTP_200_OK)
+        return DRFResponse(TagSerializer(qs, many=True).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Retrieve a tag",
@@ -195,13 +157,13 @@ class TagViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def retrieve(self, request: Request, pk: str | None = None) -> Response:
+    def retrieve(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Return a single tag by primary key."""
         try:
             obj = Tag.objects.get(pk=pk)
         except Tag.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(TagSerializer(obj).data, status=status.HTTP_200_OK)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return DRFResponse(TagSerializer(obj).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Create a tag",
@@ -214,13 +176,13 @@ class TagViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def create(self, request: Request) -> Response:
+    def create(self, request: DRFRequest) -> DRFResponse:
         """Create a new tag. Admin only."""
         IsAdminOnly().check_permission_or_deny(request)
         serializer = TagSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return DRFResponse(serializer.data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         summary="Partially update a tag",
@@ -234,17 +196,17 @@ class TagViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def partial_update(self, request: Request, pk: str | None = None) -> Response:
+    def partial_update(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Partially update an existing tag. Admin only."""
         IsAdminOnly().check_permission_or_deny(request)
         try:
             obj = Tag.objects.get(pk=pk)
         except Tag.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = TagSerializer(obj, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return DRFResponse(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Delete a tag",
@@ -256,15 +218,15 @@ class TagViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def destroy(self, request: Request, pk: str | None = None) -> Response:
+    def destroy(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Delete a tag. Admin only."""
         IsAdminOnly().check_permission_or_deny(request)
         try:
             obj = Tag.objects.get(pk=pk)
         except Tag.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return DRFResponse(status=status.HTTP_204_NO_CONTENT)
 
 
 class ArticleViewSet(ViewSet, DRFResponseMixin):
@@ -274,31 +236,10 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
         DjangoFilterBackend,
         filters.SearchFilter,
         filters.OrderingFilter,
-    )
+    ]
     filterset_fields = ("category", "tags", "author", "is_published")
     search_fields = ("title", "content")
     ordering_fields = ("published_at", "view_count")
-    ordering = ("-published_at", "-id")
-
-    def get_permissions(self) -> list[BasePermission]:
-        """Return permissions depending on the current action."""
-        if self.action in ("list", "retrieve"):
-            return [AllowAny()]
-        if self.action in ("partial_update", "destroy"):
-            return [IsAuthorOrEditorOrAdmin()]
-        return [IsAuthenticated()]
-
-    def get_serializer_class(self) -> type[serializers.ModelSerializer]:
-        """Return the serializer class matching the current action."""
-        if self.action == "retrieve":
-            return ArticleDetailSerializer
-        if self.action in ("create", "partial_update"):
-            return ArticleCreateUpdateSerializer
-        if self.action == "comments":
-            return CommentCreateSerializer
-        if self.action == "reactions":
-            return ReactionSerializer
-        return ArticleListSerializer
 
     @extend_schema(
         summary="List articles",
@@ -307,7 +248,7 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def list(self, request: Request) -> Response:
+    def list(self, request: DRFRequest) -> DRFResponse:
         """Return a paginated list of articles."""
         qs = (
             Article.objects.select_related("author", "category")
@@ -315,9 +256,7 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
             .order_by("-published_at", "-id")
         )
         paginator = get_paginator(request, self)
-        return self.get_drf_response(
-            request, qs, ArticleListSerializer, many=True, paginator=paginator
-        )
+        return self.get_drf_response(request, qs, ArticleListSerializer, many=True, paginator=paginator)
 
     @extend_schema(
         summary="Retrieve an article",
@@ -327,7 +266,7 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def retrieve(self, request: Request, pk: str | None = None) -> Response:
+    def retrieve(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Return full article detail."""
         try:
             obj = (
@@ -336,8 +275,8 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
                 .get(pk=pk)
             )
         except Article.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return DRFResponse(
             ArticleDetailSerializer(obj, context={"request": request}).data,
             status=status.HTTP_200_OK,
         )
@@ -352,7 +291,7 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def create(self, request: Request) -> Response:
+    def create(self, request: DRFRequest) -> DRFResponse:
         """Create a new article. Authenticated users only."""
         IsAuthenticated().check_permission_or_deny(request)
         serializer = ArticleCreateUpdateSerializer(
@@ -360,7 +299,7 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
         )
         serializer.is_valid(raise_exception=True)
         article = serializer.save()
-        return Response(
+        return DRFResponse(
             ArticleDetailSerializer(article, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
@@ -377,19 +316,19 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def partial_update(self, request: Request, pk: str | None = None) -> Response:
+    def partial_update(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Partially update an article. Author, editor, or admin only."""
         try:
             obj = Article.objects.get(pk=pk)
         except Article.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         IsAuthorOrEditorOrAdmin().check_object_permission_or_deny(request, obj)
         serializer = ArticleCreateUpdateSerializer(
             obj, data=request.data, partial=True, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
         article = serializer.save()
-        return Response(
+        return DRFResponse(
             ArticleDetailSerializer(article, context={"request": request}).data,
             status=status.HTTP_200_OK,
         )
@@ -404,15 +343,15 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def destroy(self, request: Request, pk: str | None = None) -> Response:
+    def destroy(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Soft-delete an article. Author, editor, or admin only."""
         try:
             obj = Article.objects.get(pk=pk)
         except Article.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         IsAuthorOrEditorOrAdmin().check_object_permission_or_deny(request, obj)
         obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return DRFResponse(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
         summary="Add a comment to an article",
@@ -430,29 +369,19 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
         url_path="comments",
         permission_classes=[IsAuthenticated],
     )
-    @extend_schema(
-        request=ArticleCommentCreateRequestSchemaSerializer,
-        responses={
-            status.HTTP_201_CREATED: CommentResponseSchemaSerializer,
-            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
-            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
-        },
-    )
-    def comments(
-        self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
-    ) -> DRFResponse:
-        """Handle POST /articles/{id}/comments/ — add comment to article."""
+    def comments(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
+        """Add a comment or reply to an article."""
         try:
             Article.objects.get(pk=pk)
         except Article.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = CommentCreateSerializer(
             data={**request.data, "article": pk},
             context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
         comment = serializer.save()
-        return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
+        return DRFResponse(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         summary="Add a reaction to an article",
@@ -470,21 +399,19 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
         url_path="reactions",
         permission_classes=[IsAuthenticated],
     )
-    def reactions(self, request: Request, pk: str | None = None) -> Response:
+    def reactions(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """React to an article."""
         try:
             article = Article.objects.get(pk=pk)
         except Article.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = ReactionSerializer(
             data={**request.data, "article": pk},
             context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
         reaction = serializer.save(user=request.user, article=article)
-        return Response(
-            ReactionSerializer(reaction).data, status=status.HTTP_201_CREATED
-        )
+        return DRFResponse(ReactionSerializer(reaction).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         summary="Increment article view count",
@@ -499,12 +426,12 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
         url_path="view",
         permission_classes=[AllowAny],
     )
-    def view(self, request: Request, pk: str | None = None) -> Response:
+    def view(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Increment the view counter for an article."""
         updated = Article.objects.filter(pk=pk).update(view_count=F("view_count") + 1)
         if not updated:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response({"detail": "ok"}, status=status.HTTP_200_OK)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return DRFResponse({"detail": "ok"}, status=status.HTTP_200_OK)
 
 
 class CommentViewSet(ViewSet):
@@ -517,16 +444,14 @@ class CommentViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def list(self, request: Request) -> Response:
+    def list(self, request: DRFRequest) -> DRFResponse:
         """Return all active comments."""
         qs = (
             Comment.objects.filter(is_active=True)
             .select_related("user")
             .order_by("created_at")
         )
-        return Response(
-            CommentSerializer(qs, many=True).data, status=status.HTTP_200_OK
-        )
+        return DRFResponse(CommentSerializer(qs, many=True).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Retrieve a comment",
@@ -536,13 +461,13 @@ class CommentViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def retrieve(self, request: Request, pk: str | None = None) -> Response:
+    def retrieve(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Return a single comment by primary key."""
         try:
             obj = Comment.objects.get(pk=pk, is_active=True)
         except Comment.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(CommentSerializer(obj).data, status=status.HTTP_200_OK)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return DRFResponse(CommentSerializer(obj).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Create a comment",
@@ -554,7 +479,7 @@ class CommentViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def create(self, request: Request) -> Response:
+    def create(self, request: DRFRequest) -> DRFResponse:
         """Create a new comment. Authenticated users only."""
         IsAuthenticated().check_permission_or_deny(request)
         serializer = CommentCreateSerializer(
@@ -562,7 +487,7 @@ class CommentViewSet(ViewSet):
         )
         serializer.is_valid(raise_exception=True)
         comment = serializer.save()
-        return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
+        return DRFResponse(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         summary="Partially update a comment",
@@ -576,19 +501,19 @@ class CommentViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def partial_update(self, request: Request, pk: str | None = None) -> Response:
+    def partial_update(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Partially update a comment. Author or admin only."""
         try:
             obj = Comment.objects.get(pk=pk)
         except Comment.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         IsCommentAuthorOrAdmin().check_object_permission_or_deny(request, obj)
         serializer = CommentCreateSerializer(
             obj, data=request.data, partial=True, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
         comment = serializer.save()
-        return Response(CommentSerializer(comment).data, status=status.HTTP_200_OK)
+        return DRFResponse(CommentSerializer(comment).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Delete a comment",
@@ -600,15 +525,15 @@ class CommentViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def destroy(self, request: Request, pk: str | None = None) -> Response:
+    def destroy(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Soft-delete a comment. Author or admin only."""
         try:
             obj = Comment.objects.get(pk=pk)
         except Comment.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         IsCommentAuthorOrAdmin().check_object_permission_or_deny(request, obj)
         obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return DRFResponse(status=status.HTTP_204_NO_CONTENT)
 
 
 class ReactionViewSet(ViewSet):
@@ -621,12 +546,10 @@ class ReactionViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def list(self, request: Request) -> Response:
+    def list(self, request: DRFRequest) -> DRFResponse:
         """Return all reactions."""
         qs = Reaction.objects.select_related("user", "article", "comment")
-        return Response(
-            ReactionSerializer(qs, many=True).data, status=status.HTTP_200_OK
-        )
+        return DRFResponse(ReactionSerializer(qs, many=True).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Retrieve a reaction",
@@ -636,13 +559,13 @@ class ReactionViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def retrieve(self, request: Request, pk: str | None = None) -> Response:
+    def retrieve(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Return a single reaction by primary key."""
         try:
             obj = Reaction.objects.get(pk=pk)
         except Reaction.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(ReactionSerializer(obj).data, status=status.HTTP_200_OK)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return DRFResponse(ReactionSerializer(obj).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Create a reaction",
@@ -654,15 +577,15 @@ class ReactionViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def create(self, request: Request) -> Response:
+    def create(self, request: DRFRequest) -> DRFResponse:
         """Create a reaction. Authenticated users only."""
         IsAuthenticated().check_permission_or_deny(request)
-        serializer = ReactionSerializer(data=request.data, context={"request": request})
+        serializer = ReactionSerializer(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         reaction = serializer.save(user=request.user)
-        return Response(
-            ReactionSerializer(reaction).data, status=status.HTTP_201_CREATED
-        )
+        return DRFResponse(ReactionSerializer(reaction).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         summary="Delete a reaction",
@@ -674,14 +597,14 @@ class ReactionViewSet(ViewSet):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
-    def destroy(self, request: Request, pk: str | None = None) -> Response:
+    def destroy(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Delete a reaction. Reaction owner only."""
         IsAuthenticated().check_permission_or_deny(request)
         try:
             obj = Reaction.objects.get(pk=pk)
         except Reaction.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         if obj.user_id != request.user.pk:
-            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+            return DRFResponse({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return DRFResponse(status=status.HTTP_204_NO_CONTENT)

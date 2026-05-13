@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from rest_framework.serializers import (
     CharField,
     ModelSerializer,
+    PrimaryKeyRelatedField,
     SerializerMethodField,
     ValidationError,
 )
 
-# Project modules
-from apps.main.models import Category, Tag, Article, Comment, Reaction
+from apps.main.models import Article, Category, Comment, Reaction, Tag
 
 
 class CategorySerializer(ModelSerializer):
     """Serialize a Category with optional parent nesting."""
-
-    """Serializer for category read/write payloads."""
 
     class Meta:
         model = Category
@@ -31,8 +31,6 @@ class CategorySerializer(ModelSerializer):
 
 
 class TagSerializer(ModelSerializer):
-    """Serializer for tag read/write payloads."""
-
     """Serialize a Tag."""
 
     class Meta:
@@ -41,8 +39,6 @@ class TagSerializer(ModelSerializer):
 
 
 class ArticleListSerializer(ModelSerializer):
-    """Serializer for article list responses."""
-
     """Lightweight article serializer used in list views."""
 
     tags = TagSerializer(many=True, read_only=True)
@@ -79,8 +75,6 @@ class ArticleListSerializer(ModelSerializer):
 
 
 class ArticleDetailSerializer(ArticleListSerializer):
-    """Serializer for article detail responses."""
-
     """Full article serializer including content, comments, and reaction counts."""
 
     content = CharField()
@@ -95,19 +89,19 @@ class ArticleDetailSerializer(ArticleListSerializer):
         )
 
     def get_comments(self, obj: Article) -> list[dict[str, Any]]:
-        """Return active comments ordered by creation time."""
-        qs = obj.comments.filter(is_active=True).order_by("created_at")
+        """Return active top-level comments ordered by creation time."""
+        qs = obj.comments.filter(is_active=True, parent=None).order_by("created_at")
         return CommentSerializer(qs, many=True).data
 
     def get_reactions_count(self, obj: Article) -> int:
-        """Return reactions count for the article."""
+        """Return total reaction count for the article."""
         return obj.reactions.count()
 
 
-class ArticleCreateUpdateSerializer(serializers.ModelSerializer):
+class ArticleCreateUpdateSerializer(ModelSerializer):
     """Serializer for article create/update requests."""
 
-    tags = serializers.PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True, required=False)
+    tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True, required=False)
 
     class Meta:
         model = Article
@@ -122,7 +116,7 @@ class ArticleCreateUpdateSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data: dict[str, Any]) -> Article:
-        """Create article in transaction and set related tags."""
+        """Create article, set author from request context, and assign tags."""
         tags = validated_data.pop("tags", [])
         article = Article.objects.create(
             author=self.context["request"].user,
@@ -142,11 +136,11 @@ class ArticleCreateUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
-class CommentSerializer(serializers.ModelSerializer):
-    """Serializer for comment read responses with nested user/replies."""
+class CommentSerializer(ModelSerializer):
+    """Serialize a comment with nested replies and user info."""
 
-    user = serializers.SerializerMethodField()
-    replies = serializers.SerializerMethodField()
+    user = SerializerMethodField()
+    replies = SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -163,8 +157,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_user(self, obj: Comment) -> dict[str, Any] | None:
         """Return compact comment author representation."""
-        user = getattr(obj, "user", None)
-        if not user:
+        if obj.user is None:
             return None
         return {"id": obj.user_id, "email": obj.user.email}
 
@@ -175,34 +168,29 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class CommentCreateSerializer(ModelSerializer):
-    """Serializer for comment creation payload."""
-
     """Serializer for creating a new comment or reply."""
 
     class Meta:
         model = Comment
         fields: tuple[str, ...] = ("article", "parent", "content")
 
-    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Validate that parent comment belongs to same article."""
-        parent = data.get("parent")
-        article = data.get("article")
-        if parent and parent.article_id != article.id:
-            raise serializers.ValidationError("Parent must belong to same article.")
-        return data
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        """Validate that parent comment belongs to the same article."""
+        parent = attrs.get("parent")
+        if parent and parent.article_id != attrs["article"].pk:
+            raise ValidationError({"parent": "Parent comment must belong to the same article."})
+        return attrs
 
     def create(self, validated_data: dict[str, Any]) -> Comment:
         """Create comment and bind current authenticated user."""
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        validated_data["user"] = user
-        return super().create(validated_data)
+        return Comment.objects.create(
+            user=self.context["request"].user,
+            **validated_data,
+        )
 
 
 class ReactionSerializer(ModelSerializer):
     """Serializer for creating and reading reactions."""
-
-    """Serializer for reaction create/read payloads."""
 
     class Meta:
         model = Reaction
@@ -216,22 +204,19 @@ class ReactionSerializer(ModelSerializer):
         )
         read_only_fields = ("user",)
 
-    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         """Validate reaction target and uniqueness constraints per user."""
-        # exactly one target must be provided
-        has_article = bool(data.get("article"))
-        has_comment = bool(data.get("comment"))
+        has_article = bool(attrs.get("article"))
+        has_comment = bool(attrs.get("comment"))
         if has_article == has_comment:
-            raise serializers.ValidationError("Provide exactly one target: article or comment.")
+            raise ValidationError("Provide exactly one target: article or comment.")
 
         user = self.context["request"].user
-        if has_article:
-            if Reaction.objects.filter(user=user, article=data["article"]).exists():
-                raise serializers.ValidationError("You already reacted to this article.")
-        if has_comment:
-            if Reaction.objects.filter(user=user, comment=data["comment"]).exists():
-                raise serializers.ValidationError("You already reacted to this comment.")
-        return data
+        if has_article and Reaction.objects.filter(user=user, article=attrs["article"]).exists():
+            raise ValidationError("You already reacted to this article.")
+        if has_comment and Reaction.objects.filter(user=user, comment=attrs["comment"]).exists():
+            raise ValidationError("You already reacted to this comment.")
+        return attrs
 
     def create(self, validated_data: dict[str, Any]) -> Reaction:
         """Create reaction for current authenticated user."""
