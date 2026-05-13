@@ -1,11 +1,7 @@
 """ViewSets for categories, tags, articles, comments, and reactions."""
-# Python modules
-from typing import Any
-from django.db.models import QuerySet
-from django.db import transaction
-
 from __future__ import annotations
 
+# Python modules
 from django.db.models import F
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema

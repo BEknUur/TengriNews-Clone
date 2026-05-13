@@ -19,9 +19,9 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 
 # Project modules
 from apps.accounts.auth.serializers import RegistrationSerializer, LoginSerializer
-from apps.abstract.decorators import validate_serializer_data
-from apps.abstract.mixins import DRFResponseMixin
-from apps.abstract.trottling import CustomAnonRateThrottle, CustomUserRateThrottle
+from apps.abstracts.decorators import validate_serializer_data
+from apps.abstracts.mixins import DRFResponseMixin
+from apps.abstracts.trottling import CustomAnonRateThrottle, CustomUserRateThrottle
 from apps.accounts.tasks import send_welcome_email_task
 
 logger = logging.getLogger(__name__)

@@ -4,6 +4,7 @@ DEFAULT_PAGE_SIZE: int = 20
 MAX_PAGE_SIZE: int = 200
 
 ENV_ID: str = config("TENGRI_ENV_ID", default="local")
+ENV_POSSIBLE_OPTIONS: list[str] = ["local", "prod"]
 
 SECRET_KEY: str = config(
     "SECRET_KEY",

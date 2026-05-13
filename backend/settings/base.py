@@ -36,7 +36,7 @@ DJANGO_AND_THIRD_PARTY_APPS = [
 ]
 
 PROJECT_APPS = [
-    "apps.abstract.apps.AbstractConfig",
+    "apps.abstracts.apps.AbstractConfig",
     "apps.main.apps.MainConfig",
     "apps.accounts.apps.AccountsConfig",
 ]
@@ -140,8 +140,8 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_THROTTLE_CLASSES": [
-        "apps.abstract.trottling.CustomAnonRateThrottle",
-        "apps.abstract.trottling.CustomUserRateThrottle",
+        "apps.abstracts.trottling.CustomAnonRateThrottle",
+        "apps.abstracts.trottling.CustomUserRateThrottle",
         "rest_framework.throttling.ScopedRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
@@ -161,7 +161,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
-    "apps.abstract.ratelimit.RateLimitMiddleware",
+    "apps.abstracts.ratelimit.RateLimitMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -243,11 +243,11 @@ CELERY_TASK_REJECT_ON_WORKER_LOST = True
 
 CELERY_BEAT_SCHEDULE = {
     "cleanup_soft_deleted_records": {
-        "task": "apps.abstract.tasks.cleanup_soft_deleted_records",
+        "task": "apps.abstracts.tasks.cleanup_soft_deleted_records",
         "schedule": crontab(hour=3, minute=0),
     },
     "collect_content_statistics": {
-        "task": "apps.abstract.tasks.collect_content_statistics",
+        "task": "apps.abstracts.tasks.collect_content_statistics",
         "schedule": crontab(hour=3, minute=0),
     },
 }
