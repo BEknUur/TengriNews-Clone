@@ -2,6 +2,7 @@
 import os
 from datetime import timedelta
 from settings.conf import *  # noqa: F403
+from celery.schedules import crontab
 
 """
 Path configurations
@@ -138,12 +139,12 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_TROTTLE_CLASSES": [
+    "DEFAULT_THROTTLE_CLASSES": [
         "apps.abstract.trottling.CustomAnonRateThrottle",
         "apps.abstract.trottling.CustomUserRateThrottle",
         "rest_framework.throttling.ScopedRateThrottle",
     ],
-    "DEFAULT_TROTTLE_RATES": {
+    "DEFAULT_THROTTLE_RATES": {
         "anon": "100/hour",
         "user": "1000/hour",
         "auth_login": "5/minute",
@@ -160,6 +161,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "apps.abstract.ratelimit.RateLimitMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -235,11 +237,20 @@ CELERY_RESULT_SERIALIZER = "json"
 
 CELERY_TIMEZONE = TIME_ZONE
 
-CELERY_TASK_ACK_LATE = True
+CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 
-CELERY_BEAT_SCHEDULE = {}
+CELERY_BEAT_SCHEDULE = {
+    "cleanup_soft_deleted_records": {
+        "task": "apps.abstract.tasks.cleanup_soft_deleted_records",
+        "schedule": crontab(hour=3, minute=0),
+    },
+    "collect_content_statistics": {
+        "task": "apps.abstract.tasks.collect_content_statistics",
+        "schedule": crontab(hour=3, minute=0),
+    },
+}
 
 """
 Static | Media
