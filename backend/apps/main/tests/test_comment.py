@@ -1,6 +1,4 @@
 import pytest
-from contextlib import nullcontext as does_not_raise
-from typing import Any
 
 from apps.main.models import Comment, Article
 from apps.accounts.models import CustomUser
@@ -40,25 +38,35 @@ class TestCommentViewSet:
         response = api_client.get("/api/comments/9999/")
         assert response.status_code == 404, f"Expected 404, got {response.status_code}"
 
-    def test_create_authenticated_returns_201(self, auth_client, article: Article) -> None:
+    def test_create_authenticated_returns_201(
+        self, auth_client, article: Article
+    ) -> None:
         """POST /api/comments/ by authenticated user returns 201."""
         payload = {"article": article.pk, "content": "This is a great read!"}
         response = auth_client.post("/api/comments/", payload)
-        assert response.status_code == 201, (
-            f"Expected 201, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 201
+        ), f"Expected 201, got {response.status_code}: {response.data}"
 
-    def test_create_unauthenticated_returns_401(self, api_client, article: Article) -> None:
+    def test_create_unauthenticated_returns_401(
+        self, api_client, article: Article
+    ) -> None:
         """POST /api/comments/ without token returns 401."""
-        response = api_client.post("/api/comments/", {"article": article.pk, "content": "Test"})
+        response = api_client.post(
+            "/api/comments/", {"article": article.pk, "content": "Test"}
+        )
         assert response.status_code == 401, f"Expected 401, got {response.status_code}"
 
-    def test_partial_update_by_author_returns_200(self, auth_client, comment: Comment) -> None:
+    def test_partial_update_by_author_returns_200(
+        self, auth_client, comment: Comment
+    ) -> None:
         """PATCH /api/comments/{id}/ by comment author returns 200."""
-        response = auth_client.patch(f"/api/comments/{comment.pk}/", {"content": "Updated content"})
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
+        response = auth_client.patch(
+            f"/api/comments/{comment.pk}/", {"content": "Updated content"}
         )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
     def test_partial_update_not_found_returns_404(self, auth_client) -> None:
         """PATCH /api/comments/9999/ returns 404."""
@@ -80,7 +88,7 @@ class TestCommentViewSet:
         argvalues=[
             ("Valid comment content", 201),
             ("", 400),
-        ]
+        ],
     )
     def test_create_content_validation_parametrized(
         self,
@@ -90,7 +98,9 @@ class TestCommentViewSet:
         expected_status: int,
     ) -> None:
         """Parametrized: comment creation with valid and invalid content."""
-        response = auth_client.post("/api/comments/", {"article": article.pk, "content": content})
-        assert response.status_code == expected_status, (
-            f"content='{content}': expected {expected_status}, got {response.status_code}: {response.data}"
+        response = auth_client.post(
+            "/api/comments/", {"article": article.pk, "content": content}
         )
+        assert (
+            response.status_code == expected_status
+        ), f"content='{content}': expected {expected_status}, got {response.status_code}: {response.data}"

@@ -13,8 +13,7 @@ from rest_framework.response import Response as DRFResponse
 from rest_framework.serializers import Serializer
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 
-
-T = TypeVar('T', bound=Model)
+T = TypeVar("T", bound=Model)
 
 
 def validate_serializer_data(
@@ -34,30 +33,30 @@ def validate_serializer_data(
             **kwargs: dict[Any, Any],
         ):
             local_context: dict[str, Any] = dict(context or {})
-            local_context['request'] = request
+            local_context["request"] = request
 
             # Purpose: choose body for mutating methods and query params for read methods.
-            if request.method in ('POST', 'PUT', 'PATCH'):
+            if request.method in ("POST", "PUT", "PATCH"):
                 data = request.data
             else:
                 data = request.query_params
 
-            if 'pk' in kwargs:
-                local_context['pk'] = int(kwargs['pk'])
+            if "pk" in kwargs:
+                local_context["pk"] = int(kwargs["pk"])
 
-            if 'object' in kwargs:
-                local_context['object'] = kwargs['object']
+            if "object" in kwargs:
+                local_context["object"] = kwargs["object"]
 
             serializer: Serializer = serializer_class(
-                instance=local_context.get('object'),
+                instance=local_context.get("object"),
                 data=data,
                 context=local_context,
                 many=many,
-                partial=request.method == 'PATCH',
+                partial=request.method == "PATCH",
             )
             if serializer.is_valid():
-                kwargs['validated_data'] = serializer.validated_data.copy()
-                kwargs['serializer'] = serializer
+                kwargs["validated_data"] = serializer.validated_data.copy()
+                kwargs["serializer"] = serializer
                 return func(self, request, *args, **kwargs)
 
             return DRFResponse(
@@ -85,25 +84,25 @@ def find_queryset_object_by_query_pk(
             *args: tuple[Any, ...],
             **kwargs: dict[Any, Any],
         ) -> DRFResponse:
-            pk: Optional[str] = kwargs.get('pk', None)
-            assert pk is not None, 'Primary key is not provided'
+            pk: Optional[str] = kwargs.get("pk", None)
+            assert pk is not None, "Primary key is not provided"
 
             if not pk.isdigit():
                 return DRFResponse(
                     data={
-                        'id': [
-                            f'{entity_name} ID must be a number.',
+                        "id": [
+                            f"{entity_name} ID must be a number.",
                         ]
                     },
                     status=HTTP_400_BAD_REQUEST,
                 )
             try:
-                kwargs['object'] = queryset.get(pk=pk)
+                kwargs["object"] = queryset.get(pk=pk)
                 return func(self, request, *args, **kwargs)
             except queryset.model.DoesNotExist:
                 return DRFResponse(
                     data={
-                        'id': [
+                        "id": [
                             f"{entity_name} with ID {pk} hasn't been found.",
                         ]
                     },
@@ -112,8 +111,8 @@ def find_queryset_object_by_query_pk(
             except queryset.model.MultipleObjectsReturned:
                 return DRFResponse(
                     data={
-                        'id': [
-                            f'Multiple {entity_name} objects returned for ID {pk}.',
+                        "id": [
+                            f"Multiple {entity_name} objects returned for ID {pk}.",
                         ],
                     },
                     status=HTTP_400_BAD_REQUEST,

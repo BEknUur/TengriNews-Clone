@@ -7,13 +7,12 @@ from apps.accounts.models import CustomUser
 from apps.main.models import Category, Tag, Article
 
 
-
 @dataclass
 class AuthData:
     """Holds authenticated user and its token."""
+
     user: CustomUser
     token: str
-
 
 
 @pytest.fixture
@@ -58,7 +57,6 @@ def admin_client(api_client: APIClient, admin_user: CustomUser) -> APIClient:
     refresh = RefreshToken.for_user(admin_user)
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {str(refresh.access_token)}")
     return api_client
-
 
 
 @pytest.fixture

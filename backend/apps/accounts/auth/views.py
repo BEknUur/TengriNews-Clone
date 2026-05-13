@@ -17,7 +17,6 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 
-
 # Project modules
 from apps.accounts.auth.serializers import RegistrationSerializer, LoginSerializer
 from apps.abstract.decorators import validate_serializer_data

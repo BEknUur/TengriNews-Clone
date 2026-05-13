@@ -2,12 +2,12 @@
 from settings.base import *  # noqa: F403
 from settings.conf import REDIS_HOST, REDIS_PORT, REDIS_DB
 
-DEBUG = True
+DEBUG: bool = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS: list = ["*"]
 
 # Database configuration
-DATABASES = {
+DATABASES: dict = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": "localdb.sqlite3",
@@ -15,7 +15,7 @@ DATABASES = {
 }
 
 # Caching configuration
-CACHES = {
+CACHES: dict = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
