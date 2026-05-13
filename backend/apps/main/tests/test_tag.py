@@ -1,6 +1,4 @@
 import pytest
-from contextlib import nullcontext as does_not_raise
-from typing import Any
 
 from apps.main.models import Tag
 
@@ -27,9 +25,9 @@ class TestTagViewSet:
     def test_retrieve_correct_name(self, api_client, tag: Tag) -> None:
         """Retrieve returns correct tag name."""
         response = api_client.get(f"/api/tags/{tag.pk}/")
-        assert response.data["name"] == tag.name, (
-            f"Expected name={tag.name}, got {response.data.get('name')}"
-        )
+        assert (
+            response.data["name"] == tag.name
+        ), f"Expected name={tag.name}, got {response.data.get('name')}"
 
     def test_retrieve_not_found_returns_404(self, api_client) -> None:
         """GET /api/tags/9999/ returns 404."""
@@ -40,9 +38,9 @@ class TestTagViewSet:
         """POST /api/tags/ by admin returns 201."""
         payload = {"name": "Python", "slug": "python"}
         response = admin_client.post("/api/tags/", payload)
-        assert response.status_code == 201, (
-            f"Expected 201, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 201
+        ), f"Expected 201, got {response.status_code}: {response.data}"
 
     def test_create_by_regular_user_returns_403(self, auth_client) -> None:
         """POST /api/tags/ by regular user returns 403."""
@@ -57,9 +55,9 @@ class TestTagViewSet:
     @pytest.mark.parametrize(
         argnames=["name", "slug", "expected_status"],
         argvalues=[
-            ("Django", "django", 400),   # duplicate - tag fixture already exists
-            ("FastAPI", "fastapi", 201), # new - should succeed
-        ]
+            ("Django", "django", 400),  # duplicate - tag fixture already exists
+            ("FastAPI", "fastapi", 201),  # new - should succeed
+        ],
     )
     def test_create_parametrized(
         self,
@@ -71,16 +69,18 @@ class TestTagViewSet:
     ) -> None:
         """Parametrized: create tags with different names/slugs."""
         response = admin_client.post("/api/tags/", {"name": name, "slug": slug})
-        assert response.status_code == expected_status, (
-            f"name={name}: expected {expected_status}, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == expected_status
+        ), f"name={name}: expected {expected_status}, got {response.status_code}: {response.data}"
 
     def test_partial_update_by_admin_returns_200(self, admin_client, tag: Tag) -> None:
         """PATCH /api/tags/{id}/ by admin returns 200."""
-        response = admin_client.patch(f"/api/tags/{tag.pk}/", {"name": "Updated Django"})
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
+        response = admin_client.patch(
+            f"/api/tags/{tag.pk}/", {"name": "Updated Django"}
         )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
         assert response.data["name"] == "Updated Django"
 
     def test_partial_update_not_found_returns_404(self, admin_client) -> None:

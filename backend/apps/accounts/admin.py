@@ -28,7 +28,7 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
         "created_at",
     )
 
-    list_filter = ("is_active", "is_staff","role")
+    list_filter = ("is_active", "is_staff", "role")
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)
 

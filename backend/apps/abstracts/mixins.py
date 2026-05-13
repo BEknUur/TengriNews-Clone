@@ -16,6 +16,7 @@ from rest_framework.status import HTTP_200_OK
 
 class DRFResponseMixin:
     """Mixin to get DRF response."""
+
     def get_drf_response(
         self,
         request: DRFRequest,
@@ -28,7 +29,7 @@ class DRFResponseMixin:
     ) -> DRFResponse:
         """Get DRF response with optional pagination."""
         if not serializer_context:
-            serializer_context = {'request': request}
+            serializer_context = {"request": request}
 
         if paginator and many:
             objects: list = paginator.paginate_queryset(
@@ -47,6 +48,7 @@ class DRFResponseMixin:
 
 class ModelInstanceMixin:
     """Mixin to get model instance."""
+
     def get_model_instance(
         self,
         model: Type[Model],

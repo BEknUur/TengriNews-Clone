@@ -3,7 +3,7 @@ from django.conf import settings
 from rest_framework.pagination import BasePagination
 from rest_framework.request import Request as DRFRequest
 
-from apps.abstract.paginators import (
+from apps.abstracts.paginators import (
     AbstractCursorPaginator,
     AbstractPageNumberPaginator,
     AbstractLimitOffsetPaginator,
@@ -18,6 +18,7 @@ PAGINATION_MAP = {
     ),
     "limit": lambda: AbstractLimitOffsetPaginator(),
 }
+
 
 def get_paginator(
     request: DRFRequest,

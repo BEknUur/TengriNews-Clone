@@ -23,10 +23,7 @@ class RolePermissionMixin:
         user = request.user
         user_role = getattr(user, "role", None)
 
-        return bool(
-            getattr(user, "is_superuser", False)
-            or user_role == "ADMIN"
-        )
+        return bool(getattr(user, "is_superuser", False) or user_role == "ADMIN")
 
     def _is_editor(self, request: DRFRequest) -> bool:
         if not self._is_authenticated(request):
@@ -47,6 +44,20 @@ class RolePermissionMixin:
                 return owner_id
 
         return None
+
+    def check_permission_or_deny(self, request: DRFRequest) -> None:
+        """Raise PermissionDenied if has_permission returns False."""
+        from rest_framework.exceptions import PermissionDenied
+
+        if not self.has_permission(request, None):  # type: ignore[attr-defined]
+            raise PermissionDenied(self.message)  # type: ignore[attr-defined]
+
+    def check_object_permission_or_deny(self, request: DRFRequest, obj: Any) -> None:
+        """Raise PermissionDenied if has_object_permission returns False."""
+        from rest_framework.exceptions import PermissionDenied
+
+        if not self.has_object_permission(request, None, obj):  # type: ignore[attr-defined]
+            raise PermissionDenied(self.message)  # type: ignore[attr-defined]
 
 
 class IsEditorOrAdmin(RolePermissionMixin, BasePermission):
@@ -75,7 +86,9 @@ class IsAuthorOrEditorOrAdmin(RolePermissionMixin, BasePermission):
     def has_permission(self, request: DRFRequest, view: ViewSet) -> bool:
         return self._is_authenticated(request)
 
-    def has_object_permission(self, request: DRFRequest, view: ViewSet, obj: Any) -> bool:
+    def has_object_permission(
+        self, request: DRFRequest, view: ViewSet, obj: Any
+    ) -> bool:
         if not self._is_authenticated(request):
             return False
 
@@ -94,7 +107,9 @@ class IsCommentAuthorOrAdmin(RolePermissionMixin, BasePermission):
     def has_permission(self, request: DRFRequest, view: ViewSet) -> bool:
         return self._is_authenticated(request)
 
-    def has_object_permission(self, request: DRFRequest, view: ViewSet, obj: Any) -> bool:
+    def has_object_permission(
+        self, request: DRFRequest, view: ViewSet, obj: Any
+    ) -> bool:
         if not self._is_authenticated(request):
             return False
 
@@ -113,7 +128,9 @@ class IsOwnerOrAdmin(RolePermissionMixin, BasePermission):
     def has_permission(self, request: DRFRequest, view: ViewSet) -> bool:
         return self._is_authenticated(request)
 
-    def has_object_permission(self, request: DRFRequest, view: ViewSet, obj: Any) -> bool:
+    def has_object_permission(
+        self, request: DRFRequest, view: ViewSet, obj: Any
+    ) -> bool:
         if not self._is_authenticated(request):
             return False
 

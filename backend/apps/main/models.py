@@ -1,17 +1,50 @@
-from django.db import models
+"""Models for the main news domain: Category, Tag, Article, Comment, Reaction."""
+
+from __future__ import annotations
+
 from django.conf import settings
-from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.db.models import (
+    BooleanField,
+    CharField,
+    DateTimeField,
+    ForeignKey,
+    Index,
+    ManyToManyField,
+    PositiveIntegerField,
+    SlugField,
+    TextField,
+    TextChoices,
+    UniqueConstraint,
+    Q,
+    CASCADE,
+    SET_NULL,
+)
+from django.utils import timezone
 
+from apps.abstracts.models import AbstractTimeStamptModel
 
-from apps.abstract.models import AbstractTimeStamptModel
+# Constants
+CATEGORY_NAME_MAX_LENGTH: int = 255
+CATEGORY_SLUG_MAX_LENGTH: int = 255
+TAG_NAME_MAX_LENGTH: int = 255
+TAG_SLUG_MAX_LENGTH: int = 255
+ARTICLE_TITLE_MAX_LENGTH: int = 255
+ARTICLE_SLUG_MAX_LENGTH: int = 255
+REACTION_TYPE_MAX_LENGTH: int = 10
+
 
 class Category(AbstractTimeStamptModel):
-    """Category database (table) model."""
-    name = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(max_length=255, unique=True)
-    parent = models.ForeignKey(
-        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children"
+    """Hierarchical article category."""
+
+    name = CharField(max_length=CATEGORY_NAME_MAX_LENGTH, unique=True)
+    slug = SlugField(max_length=CATEGORY_SLUG_MAX_LENGTH, unique=True)
+    parent = ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=SET_NULL,
+        related_name="children",
     )
 
     class Meta:
@@ -19,120 +52,165 @@ class Category(AbstractTimeStamptModel):
         verbose_name_plural = "categories"
         ordering = ["name"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     def __repr__(self) -> str:
-        return f"Category(id={self.pk}, name={self.name})"
-    
-class Tag(AbstractTimeStamptModel):
-    """Tag database (table) model."""
+        return f"Category(id={self.pk}, name={self.name!r})"
 
-    name = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(max_length=255, unique=True)
+
+class Tag(AbstractTimeStamptModel):
+    """Article tag for grouping and filtering."""
+
+    name = CharField(max_length=TAG_NAME_MAX_LENGTH, unique=True)
+    slug = SlugField(max_length=TAG_SLUG_MAX_LENGTH, unique=True)
 
     class Meta:
         ordering = ["name"]
 
-
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     def __repr__(self) -> str:
-        return f"Tag(id={self.pk}, name={self.name})"
-    
+        return f"Tag(id={self.pk}, name={self.name!r})"
+
+
 class Article(AbstractTimeStamptModel):
-    """Article database (table) model."""
-    title = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True)
-    excerpt = models.TextField(blank=True)
-    content = models.TextField()
-    author = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="articles"
+    """News article written by an author and belonging to a category."""
+
+    title = CharField(max_length=ARTICLE_TITLE_MAX_LENGTH)
+    slug = SlugField(max_length=ARTICLE_SLUG_MAX_LENGTH, unique=True)
+    excerpt = TextField(blank=True)
+    content = TextField()
+    author = ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=CASCADE,
+        related_name="articles",
     )
-    category = models.ForeignKey(
-        Category, on_delete=models.SET_NULL, null=True, related_name="articles"
+    category = ForeignKey(
+        Category,
+        on_delete=SET_NULL,
+        null=True,
+        related_name="articles",
     )
-    tags = models.ManyToManyField(Tag, blank=True, related_name="articles")
-    is_published = models.BooleanField(default=False, db_index=True)
-    published_at = models.DateTimeField(null=True, blank=True)
-    view_count = models.PositiveIntegerField(default=0)
+    tags = ManyToManyField(Tag, blank=True, related_name="articles")
+    is_published = BooleanField(default=False, db_index=True)
+    published_at = DateTimeField(null=True, blank=True)
+    view_count = PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["-published_at", "-id"]
         indexes = [
-        models.Index(fields=["published_at", "id"]),
-    ]
+            Index(fields=["published_at", "id"]),
+        ]
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
+        """Auto-set published_at when article is first published."""
         if self.is_published and self.published_at is None:
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.title
 
     def __repr__(self) -> str:
-        return f"Article(id={self.pk}, title={self.title})"
-    
+        return f"Article(id={self.pk}, title={self.title!r})"
+
+
 class Comment(AbstractTimeStamptModel):
-    """Comment database (table) model."""
-    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="comments")
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="comments"
+    """User comment on an article, with optional parent for nested replies."""
+
+    article = ForeignKey(
+        Article,
+        on_delete=CASCADE,
+        related_name="comments",
     )
-    parent = models.ForeignKey(
-        "self", null=True, blank=True, on_delete=models.CASCADE, related_name="replies"
+    user = ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=SET_NULL,
+        related_name="comments",
     )
-    content = models.TextField()
-    is_active = models.BooleanField(default=True)
+    parent = ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=CASCADE,
+        related_name="replies",
+    )
+    content = TextField()
+    is_active = BooleanField(default=True)
 
     class Meta:
         ordering = ["created_at"]
-    
-    def clean(self):
-        if self.parent and self.parent.article != self.article:
+
+    def clean(self) -> None:
+        """Validate that a reply belongs to the same article as its parent."""
+        if self.parent and self.parent.article_id != self.article_id:
             raise ValidationError("Parent comment must belong to the same article.")
-        
-    def __str__(self):
-        return f"Comment by {self.pk} on {self.user}"
+
+    def __str__(self) -> str:
+        return f"Comment #{self.pk} by {self.user}"
 
     def __repr__(self) -> str:
         return f"Comment(id={self.pk}, user={self.user})"
-    
+
 
 class Reaction(AbstractTimeStamptModel):
-    """Reaction database (table) model."""
-    LIKE = "like"
-    DISLIKE = "dislike"
-    LOVE = "love"
-    LAUGH = "laugh"
+    """A user reaction (like, dislike, etc.) on an article or comment."""
 
-    REACTION_CHOICES = [
-        (LIKE, "Like"),
-        (DISLIKE, "Dislike"),
-        (LOVE, "Love"),
-        (LAUGH, "Laugh"),
-    ]
+    class ReactionType(TextChoices):
+        LIKE = "like", "Like"
+        DISLIKE = "dislike", "Dislike"
+        LOVE = "love", "Love"
+        LAUGH = "laugh", "Laugh"
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reactions")
-    article = models.ForeignKey(Article, null=True, blank=True, on_delete=models.CASCADE, related_name="reactions")
-    comment = models.ForeignKey(Comment, null=True, blank=True, on_delete=models.CASCADE, related_name="reactions")
-    type = models.CharField(max_length=20, choices=REACTION_CHOICES)
-    
+    user = ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=CASCADE,
+        related_name="reactions",
+    )
+    article = ForeignKey(
+        Article,
+        null=True,
+        blank=True,
+        on_delete=CASCADE,
+        related_name="reactions",
+    )
+    comment = ForeignKey(
+        Comment,
+        null=True,
+        blank=True,
+        on_delete=CASCADE,
+        related_name="reactions",
+    )
+    type = CharField(max_length=REACTION_TYPE_MAX_LENGTH, choices=ReactionType.choices)
+
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["user", "article"], name="unique_user_article_reaction", condition=models.Q(article__isnull=False)),
-            models.UniqueConstraint(fields=["user", "comment"], name="unique_user_comment_reaction", condition=models.Q(comment__isnull=False)),
+            UniqueConstraint(
+                fields=["user", "article"],
+                condition=Q(article__isnull=False),
+                name="unique_user_article_reaction",
+            ),
+            UniqueConstraint(
+                fields=["user", "comment"],
+                condition=Q(comment__isnull=False),
+                name="unique_user_comment_reaction",
+            ),
         ]
 
-    def clean(self):
-        if bool(self.article) == bool(self.comment):
-            raise ValidationError("Reaction must be attached to exactly one of article or comment")
+    def clean(self) -> None:
+        """Validate that reaction targets exactly one of article or comment."""
+        if bool(self.article_id) == bool(self.comment_id):
+            raise ValidationError(
+                "Reaction must be attached to exactly one of article or comment."
+            )
 
-    def __str__(self):
+    def __str__(self) -> str:
         target = self.article or self.comment
         return f"Reaction {self.type} by {self.user} on {target}"
 
     def __repr__(self) -> str:
-        return f"Reaction(id={self.pk}, type={self.type}, user={self.user})"
+        return f"Reaction(id={self.pk}, type={self.type!r}, user={self.user})"

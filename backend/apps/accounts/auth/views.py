@@ -4,7 +4,6 @@ import logging
 
 # Third-party modules
 from drf_spectacular.utils import extend_schema
-from drf_spectacular.openapi import AutoSchema as SpectacularAutoSchema
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response as DRFResponse
@@ -15,11 +14,10 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 
-
 # Project modules
 from apps.accounts.auth.serializers import RegistrationSerializer, LoginSerializer
-from apps.abstract.decorators import validate_serializer_data
-from apps.abstract.mixins import DRFResponseMixin
+from apps.abstracts.decorators import validate_serializer_data
+from apps.abstracts.mixins import DRFResponseMixin
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +51,9 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
             status=HTTP_200_OK,
         )
 
-    @extend_schema(request=RegistrationSerializer, responses={201: RegistrationSerializer})
+    @extend_schema(
+        request=RegistrationSerializer, responses={201: RegistrationSerializer}
+    )
     @action(
         methods=("POST",),
         detail=False,
@@ -79,7 +79,9 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
             status_code=HTTP_201_CREATED,
         )
 
-    @extend_schema(request=TokenRefreshSerializer, responses={200: TokenRefreshSerializer})
+    @extend_schema(
+        request=TokenRefreshSerializer, responses={200: TokenRefreshSerializer}
+    )
     @action(
         methods=("POST",),
         detail=False,

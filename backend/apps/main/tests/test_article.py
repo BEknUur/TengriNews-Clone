@@ -1,9 +1,6 @@
 import pytest
-from contextlib import nullcontext as does_not_raise
-from typing import Any
 
 from apps.main.models import Article, Category
-from apps.accounts.models import CustomUser
 
 
 @pytest.mark.django_db
@@ -21,7 +18,6 @@ class TestArticleViewSet:
         assert "pagination" in response.data, "Must have 'pagination' key"
         assert "data" in response.data, "Must have 'data' key"
 
-    # ─── Pagination type tests ────────────────────────────────────────────────
 
     def test_cursor_pagination(self, auth_client, article) -> None:
         """?pagination=cursor returns cursor-specific keys."""
@@ -59,7 +55,7 @@ class TestArticleViewSet:
             ("cursor", "next_cursor"),
             ("page", "count"),
             ("limit", "next"),
-        ]
+        ],
     )
     def test_all_pagination_types(
         self,
@@ -71,11 +67,10 @@ class TestArticleViewSet:
         """Parametrized: each pagination type returns its specific key."""
         response = auth_client.get(f"/api/articles/?pagination={pagination_type}")
         assert response.status_code == 200
-        assert expected_key in response.data["pagination"], (
-            f"Pagination '{pagination_type}' must contain key '{expected_key}'"
-        )
+        assert (
+            expected_key in response.data["pagination"]
+        ), f"Pagination '{pagination_type}' must contain key '{expected_key}'"
 
-    # ─── CRUD tests ───────────────────────────────────────────────────────────
 
     def test_retrieve_returns_200(self, auth_client, article: Article) -> None:
         """GET /api/articles/{id}/ returns 200."""
@@ -101,7 +96,9 @@ class TestArticleViewSet:
 
     def test_update_article(self, auth_client, article: Article) -> None:
         """PATCH /api/articles/{id}/ updates and returns 200."""
-        response = auth_client.patch(f"/api/articles/{article.pk}/", {"title": "Updated"})
+        response = auth_client.patch(
+            f"/api/articles/{article.pk}/", {"title": "Updated"}
+        )
         assert response.status_code == 200
 
     def test_delete_article(self, auth_client, article: Article) -> None:
