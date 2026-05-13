@@ -3,7 +3,7 @@ superuser \
 migrations migrate showmigrations seed \
 test test-v \
 lint lint-fix \
-up down logs build clean \
+up down logs build clean all \
 worker beat
 
 # config
@@ -58,6 +58,20 @@ clean:
 
 all:
 	docker compose up --build -d
+
+# tests
+test:
+	cd backend && $(PYTHON) -m pytest
+
+test-v:
+	cd backend && $(PYTHON) -m pytest -v
+
+# lint
+lint:
+	cd backend && $(PYTHON) -m ruff check apps/ settings/
+
+lint-fix:
+	cd backend && $(PYTHON) -m ruff check --fix apps/ settings/
 
 # celery
 worker:
