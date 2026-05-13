@@ -1,3 +1,5 @@
+"""Views for authentication endpoints."""
+
 # Python modules
 from typing import Any
 import logging
@@ -6,31 +8,42 @@ import logging
 from django.db import transaction
 
 # Third-party modules
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response as DRFResponse
 from rest_framework.request import Request as DRFRequest
-from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST
+from rest_framework.status import (
+    HTTP_200_OK,
+    HTTP_201_CREATED,
+    HTTP_400_BAD_REQUEST,
+    HTTP_429_TOO_MANY_REQUESTS,
+)
 from rest_framework.decorators import action
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.throttling import BaseThrottle, ScopedRateThrottle
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 
 # Project modules
 from apps.accounts.auth.serializers import RegistrationSerializer, LoginSerializer
-from apps.abstracts.decorators import validate_serializer_data
-from apps.abstracts.mixins import DRFResponseMixin
-from apps.abstracts.trottling import CustomAnonRateThrottle, CustomUserRateThrottle
+from apps.accounts.auth.schema_serializers import (
+    AccessTokenResponseSerializer,
+    LoginRequestSerializer,
+    RefreshTokenRequestSerializer,
+    RegisterRequestSerializer,
+    RegisterResponseSerializer,
+    TokenPairResponseSerializer,
+)
+from apps.abstract.decorators import validate_serializer_data
+from apps.abstract.mixins import DRFResponseMixin
+from apps.abstract.throttling import CustomAnonRateThrottle, CustomUserRateThrottle
 from apps.accounts.tasks import send_welcome_email_task
 
 logger = logging.getLogger(__name__)
 
 
 class AuthViewSet(DRFResponseMixin, ViewSet):
-    """
-    ViewSet for Authentication
-    """
+    """ViewSet for authentication endpoints (login, register, token refresh)."""
 
     permission_classes = [AllowAny]
     throttle_classes = [
@@ -39,7 +52,7 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         ScopedRateThrottle,
     ]
 
-    def get_throttles(self):
+    def get_throttles(self) -> list[BaseThrottle]:
         """Assign scoped throttle rates for login/register actions."""
         if self.action == "login":
             self.throttle_scope = "auth_login"
@@ -47,7 +60,14 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
             self.throttle_scope = "auth_register"
         return super().get_throttles()
 
-    @extend_schema(request=LoginSerializer, responses={200: LoginSerializer})
+    @extend_schema(
+        request=LoginRequestSerializer,
+        responses={
+            HTTP_200_OK: TokenPairResponseSerializer,
+            HTTP_400_BAD_REQUEST: OpenApiResponse(description="Invalid email or password"),
+            HTTP_429_TOO_MANY_REQUESTS: OpenApiResponse(description="Rate limit exceeded"),
+        },
+    )
     @action(
         methods=("POST",),
         detail=False,
@@ -58,9 +78,10 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
     def login(
         self,
         request: DRFRequest,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> DRFResponse:
+        """Authenticate user credentials and return JWT token pair."""
         email = request.data.get("email", "N/A")
         logger.info(f"Login attempt: email={email}")
         logger.info(f"Login successful: email={email}")
@@ -70,7 +91,12 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         )
 
     @extend_schema(
-        request=RegistrationSerializer, responses={201: RegistrationSerializer}
+        request=RegisterRequestSerializer,
+        responses={
+            HTTP_201_CREATED: RegisterResponseSerializer,
+            HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            HTTP_429_TOO_MANY_REQUESTS: OpenApiResponse(description="Rate limit exceeded"),
+        },
     )
     @action(
         methods=("POST",),
@@ -82,9 +108,10 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
     def register(
         self,
         request: DRFRequest,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> DRFResponse:
+        """Register a new user account and trigger welcome email."""
         email = request.data.get("email", "N/A")
         logger.info(f"Registration attempt: email={email}")
         serializer: RegistrationSerializer = kwargs["serializer"]
@@ -101,7 +128,11 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         )
 
     @extend_schema(
-        request=TokenRefreshSerializer, responses={200: TokenRefreshSerializer}
+        request=RefreshTokenRequestSerializer,
+        responses={
+            HTTP_200_OK: AccessTokenResponseSerializer,
+            HTTP_400_BAD_REQUEST: OpenApiResponse(description="Invalid or expired refresh token"),
+        },
     )
     @action(
         methods=("POST",),
@@ -112,9 +143,10 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
     def token(
         self,
         request: DRFRequest,
-        *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> DRFResponse:
+        """Exchange a refresh token for a new access token."""
         logger.info("Token refresh attempt")
         serializer: TokenRefreshSerializer = TokenRefreshSerializer(
             data=request.data,

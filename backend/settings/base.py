@@ -1,8 +1,14 @@
-# Project modules
+"""Base Django settings for TengriNews Clone project."""
+
+# Python modules
 import os
 from datetime import timedelta
-from settings.conf import *  # noqa: F403
+
+# Third-party modules
 from celery.schedules import crontab
+
+# Project modules
+from settings.conf import *  # noqa: F403
 
 """
 Path configurations
@@ -149,6 +155,20 @@ REST_FRAMEWORK = {
         "user": "1000/hour",
         "auth_login": "5/minute",
         "auth_register": "10/hour",
+    },
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "TengriNews Clone API",
+    "DESCRIPTION": "REST API documentation for TengriNews Clone.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SORT_OPERATIONS": True,
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "displayOperationId": True,
+        "defaultModelsExpandDepth": 1,
     },
 }
 

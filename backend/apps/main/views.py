@@ -1,20 +1,63 @@
+"""Views for content domain endpoints (categories, tags, articles, comments, reactions)."""
+
 """ViewSets for categories, tags, articles, comments, and reactions."""
 from __future__ import annotations
 
 # Python modules
-from django.db.models import F
-from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import filters, status
-from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.request import Request
-from rest_framework.response import Response
-from rest_framework.viewsets import ViewSet
+from typing import Any
 
-from apps.abstracts.mixins import DRFResponseMixin
-from apps.abstracts.pagination_selector import get_paginator
-from apps.main.models import Article, Category, Comment, Reaction, Tag
+# Django modules
+from django.db import transaction
+from django.db.models import QuerySet
+
+# Third-party modules
+from rest_framework import filters, serializers, status
+from rest_framework.viewsets import ViewSet
+from rest_framework.decorators import action
+from rest_framework.request import Request as DRFRequest
+from rest_framework.response import Response as DRFResponse
+from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from drf_spectacular.types import OpenApiTypes
+
+# Project modules
+from apps.abstract.mixins import DRFResponseMixin
+from apps.abstract.pagination_selector import get_paginator
+from apps.main.models import Category, Tag, Article, Comment, Reaction
+from apps.main.serializers import (
+    CategorySerializer,
+    TagSerializer,
+    ArticleListSerializer,
+    ArticleDetailSerializer,
+    ArticleCreateUpdateSerializer,
+    CommentSerializer,
+    CommentCreateSerializer,
+    ReactionSerializer,
+)
+from apps.main.schema_serializers import (
+    ArticleCommentCreateRequestSerializer as ArticleCommentCreateRequestSchemaSerializer,
+    ArticleCreateRequestSerializer as ArticleCreateRequestSchemaSerializer,
+    ArticleDetailItemSerializer as ArticleDetailItemSchemaSerializer,
+    ArticleListResponseSerializer as ArticleListResponseSchemaSerializer,
+    ArticlePatchRequestSerializer as ArticlePatchRequestSchemaSerializer,
+    ArticleReactionCreateRequestSerializer as ArticleReactionCreateRequestSchemaSerializer,
+    ArticleViewCountResponseSerializer as ArticleViewCountResponseSchemaSerializer,
+    ArticleWriteResponseSerializer as ArticleWriteResponseSchemaSerializer,
+    CategoryCreateRequestSerializer as CategoryCreateRequestSchemaSerializer,
+    CategoryPatchRequestSerializer as CategoryPatchRequestSchemaSerializer,
+    CategoryResponseSerializer as CategoryResponseSchemaSerializer,
+    CommentCreateRequestSerializer as CommentCreateRequestSchemaSerializer,
+    CommentPatchRequestSerializer as CommentPatchRequestSchemaSerializer,
+    CommentResponseSerializer as CommentResponseSchemaSerializer,
+    IdErrorSerializer as IdErrorSchemaSerializer,
+    ReactionCreateRequestSerializer as ReactionCreateRequestSchemaSerializer,
+    ReactionResponseSerializer as ReactionResponseSchemaSerializer,
+    TagCreateRequestSerializer as TagCreateRequestSchemaSerializer,
+    TagPatchRequestSerializer as TagPatchRequestSchemaSerializer,
+    TagResponseSerializer as TagResponseSchemaSerializer,
+)
+from apps.main.tasks import process_article_content_task
 from apps.main.permissions import (
     IsAdminOnly,
     IsAuthorOrEditorOrAdmin,
@@ -231,10 +274,31 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
         DjangoFilterBackend,
         filters.SearchFilter,
         filters.OrderingFilter,
-    ]
-    filterset_fields = ["category", "tags", "author", "is_published"]
-    search_fields = ["title", "content"]
-    ordering_fields = ["published_at", "view_count"]
+    )
+    filterset_fields = ("category", "tags", "author", "is_published")
+    search_fields = ("title", "content")
+    ordering_fields = ("published_at", "view_count")
+    ordering = ("-published_at", "-id")
+
+    def get_permissions(self) -> list[BasePermission]:
+        """Return permissions depending on the current action."""
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        if self.action in ("partial_update", "destroy"):
+            return [IsAuthorOrEditorOrAdmin()]
+        return [IsAuthenticated()]
+
+    def get_serializer_class(self) -> type[serializers.ModelSerializer]:
+        """Return the serializer class matching the current action."""
+        if self.action == "retrieve":
+            return ArticleDetailSerializer
+        if self.action in ("create", "partial_update"):
+            return ArticleCreateUpdateSerializer
+        if self.action == "comments":
+            return CommentCreateSerializer
+        if self.action == "reactions":
+            return ReactionSerializer
+        return ArticleListSerializer
 
     @extend_schema(
         summary="List articles",
@@ -366,8 +430,18 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
         url_path="comments",
         permission_classes=[IsAuthenticated],
     )
-    def comments(self, request: Request, pk: str | None = None) -> Response:
-        """Add a comment or reply to an article."""
+    @extend_schema(
+        request=ArticleCommentCreateRequestSchemaSerializer,
+        responses={
+            status.HTTP_201_CREATED: CommentResponseSchemaSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            status.HTTP_404_NOT_FOUND: IdErrorSchemaSerializer,
+        },
+    )
+    def comments(
+        self, request: DRFRequest, pk: int = None, *args: Any, **kwargs: Any
+    ) -> DRFResponse:
+        """Handle POST /articles/{id}/comments/ — add comment to article."""
         try:
             Article.objects.get(pk=pk)
         except Article.DoesNotExist:
