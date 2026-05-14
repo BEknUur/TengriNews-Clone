@@ -293,7 +293,7 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
     )
     def create(self, request: DRFRequest) -> DRFResponse:
         """Create a new article. Authenticated users only."""
-        IsAuthenticated().check_permission_or_deny(request)
+        self.check_permissions(request)
         serializer = ArticleCreateUpdateSerializer(
             data=request.data, context={"request": request}
         )
@@ -540,7 +540,7 @@ class CommentViewSet(ViewSet):
     )
     def create(self, request: DRFRequest) -> DRFResponse:
         """Create a new comment. Authenticated users only."""
-        IsAuthenticated().check_permission_or_deny(request)
+        self.check_permissions(request)
         serializer = CommentCreateSerializer(
             data=request.data, context={"request": request}
         )
@@ -638,7 +638,7 @@ class ReactionViewSet(ViewSet):
     )
     def create(self, request: DRFRequest) -> DRFResponse:
         """Create a reaction. Authenticated users only."""
-        IsAuthenticated().check_permission_or_deny(request)
+        self.check_permissions(request)
         serializer = ReactionSerializer(
             data=request.data, context={"request": request}
         )
@@ -658,7 +658,7 @@ class ReactionViewSet(ViewSet):
     )
     def destroy(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Delete a reaction. Reaction owner only."""
-        IsAuthenticated().check_permission_or_deny(request)
+        self.check_permissions(request)
         try:
             obj = Reaction.objects.get(pk=pk)
         except Reaction.DoesNotExist:
@@ -681,7 +681,7 @@ class BookmarkViewSet(ViewSet):
     )
     def list(self, request: DRFRequest) -> DRFResponse:
         """Return bookmarks for the authenticated user."""
-        IsAuthenticated().check_permission_or_deny(request)
+        self.check_permissions(request)
         qs = (
             Bookmark.objects.filter(user=request.user, deleted_at__isnull=True)
             .select_related("article", "article__author", "article__category")
