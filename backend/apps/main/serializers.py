@@ -12,7 +12,7 @@ from rest_framework.serializers import (
     ValidationError,
 )
 
-from apps.main.models import Article, Category, Comment, Reaction, Tag
+from apps.main.models import Article, Category, Comment, Reaction, Tag,Bookmark
 
 
 class CategorySerializer(ModelSerializer):
@@ -35,7 +35,13 @@ class TagSerializer(ModelSerializer):
 
     class Meta:
         model = Tag
-        fields: tuple[str, ...] = ("id", "name", "slug")
+        fields: tuple[str, ...] = (
+            "id", 
+            "name", 
+            "slug",
+            "created_at",
+            "updated_at",
+            )
 
 
 class ArticleListSerializer(ModelSerializer):
@@ -222,3 +228,14 @@ class ReactionSerializer(ModelSerializer):
         """Create reaction for current authenticated user."""
         validated_data["user"] = self.context["request"].user
         return super().create(validated_data)
+
+class BookmarkSeralizer(ModelSerializer):
+    """Serializer saved articles for the current user. """
+    article = ArticleListSerializer(read_only = True)
+    class Meta:
+        model = Bookmark 
+        fields: tuple[str,...] = (
+            "id",
+            "article",
+            "created_at",
+        )
