@@ -31,7 +31,7 @@ TAG_NAME_MAX_LENGTH: int = 255
 TAG_SLUG_MAX_LENGTH: int = 255
 ARTICLE_TITLE_MAX_LENGTH: int = 255
 ARTICLE_SLUG_MAX_LENGTH: int = 255
-REACTION_TYPE_MAX_LENGTH: int = 10
+REACTION_TYPE_MAX_LENGTH: int = 20
 
 
 class Category(AbstractTimeStamptModel):
@@ -214,3 +214,34 @@ class Reaction(AbstractTimeStamptModel):
 
     def __repr__(self) -> str:
         return f"Reaction(id={self.pk}, type={self.type!r}, user={self.user})"
+
+
+class Bookmark(AbstractTimeStamptModel):
+    """Saved article for a user."""
+
+    user = ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=CASCADE,
+        related_name="bookmarks",
+    )
+    article = ForeignKey(
+        Article,
+        on_delete=CASCADE,
+        related_name="bookmarks",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            UniqueConstraint(
+                fields=["user", "article"],
+                condition=Q(deleted_at__isnull=True),
+                name="unique_active_user_article_bookmark",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Bookmark user={self.user_id} article={self.article_id}"
+
+    def __repr__(self) -> str:
+        return f"Bookmark(id={self.pk}, user={self.user_id}, article={self.article_id})"
