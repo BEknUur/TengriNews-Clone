@@ -7,7 +7,7 @@ from apps.main.models import Category
 class TestCategoryViewSet:
     """Tests for CategoryViewSet endpoints."""
 
-    # --- List -----------------------------------------------------------------
+
 
     def test_list_returns_200(self, api_client) -> None:
         """GET /api/categories/ returns 200 for unauthenticated user."""
@@ -20,7 +20,6 @@ class TestCategoryViewSet:
         assert response.status_code == 200
         assert isinstance(response.data, list), "Category list must be a plain list"
 
-    # --- Retrieve -------------------------------------------------------------
 
     def test_retrieve_returns_200(self, api_client, category: Category) -> None:
         """GET /api/categories/{id}/ returns 200."""
@@ -41,7 +40,6 @@ class TestCategoryViewSet:
         response = api_client.get("/api/categories/9999/")
         assert response.status_code == 404, f"Expected 404, got {response.status_code}"
 
-    # --- Create ---------------------------------------------------------------
 
     def test_create_by_admin_returns_201(self, admin_client) -> None:
         """POST /api/categories/ by admin returns 201."""
@@ -66,9 +64,15 @@ class TestCategoryViewSet:
     @pytest.mark.parametrize(
         argnames=["name", "slug", "expected_status"],
         argvalues=[
+<<<<<<< Updated upstream
             ("Tech", "tech", 400),  # duplicate — category fixture already has this
             ("Science", "science", 201),  # new — should succeed
         ],
+=======
+            ("Tech", "tech", 400),      
+            ("Science", "science", 201),  
+        ]
+>>>>>>> Stashed changes
     )
     def test_create_parametrized(
         self,
@@ -84,7 +88,6 @@ class TestCategoryViewSet:
             response.status_code == expected_status
         ), f"name={name}: expected {expected_status}, got {response.status_code}: {response.data}"
 
-    # --- Update ---------------------------------------------------------------
 
     def test_partial_update_by_admin_returns_200(
         self, admin_client, category: Category
