@@ -2,11 +2,12 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.main.views import (
-    CategoryViewSet,
-    TagViewSet,
     ArticleViewSet,
+    BookmarkViewSet,
+    CategoryViewSet,
     CommentViewSet,
     ReactionViewSet,
+    TagViewSet,
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
@@ -16,6 +17,7 @@ router.register(r"tags", TagViewSet, basename="tags")
 router.register(r"articles", ArticleViewSet, basename="articles")
 router.register(r"comments", CommentViewSet, basename="comments")
 router.register(r"reactions", ReactionViewSet, basename="reactions")
+router.register(r"bookmarks", BookmarkViewSet, basename="bookmarks")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
