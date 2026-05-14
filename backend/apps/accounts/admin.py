@@ -23,6 +23,7 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
         "first_name",
         "last_name",
         "role",
+        "preferred_language",
         "is_active",
         "is_staff",
         "created_at",
@@ -40,6 +41,7 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
                 "fields": (
                     ("first_name", "last_name"),
                     "avatar",
+                    "preferred_language",
                     "role",
                 )
             },
@@ -76,6 +78,7 @@ class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
                     "first_name",
                     "last_name",
                     "role",
+                    "preferred_language",
                     "password1",
                     "password2",
                 ),

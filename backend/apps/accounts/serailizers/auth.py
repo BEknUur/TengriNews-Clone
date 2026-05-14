@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.contrib.auth import authenticate
+from django.utils.translation import gettext_lazy as _
 from rest_framework.serializers import (
     CharField,
     EmailField,
@@ -31,6 +32,7 @@ class RegistrationSerializer(ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "preferred_language",
             "password",
             "password_confirm",
             "tokens",
@@ -39,7 +41,7 @@ class RegistrationSerializer(ModelSerializer):
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         """Ensure both password fields match."""
         if attrs["password"] != attrs["password_confirm"]:
-            raise ValidationError({"password_confirm": "Passwords do not match."})
+            raise ValidationError({"password_confirm": _("Passwords do not match.")})
         return attrs
 
     def create(self, validated_data: dict[str, Any]) -> CustomUser:
@@ -73,9 +75,9 @@ class LoginSerializer(Serializer):
             password=attrs["password"],
         )
         if not user:
-            raise ValidationError({"email": "Invalid credentials."})
+            raise ValidationError({"email": _("Invalid credentials.")})
         if not user.is_active:
-            raise ValidationError({"email": "Account is disabled."})
+            raise ValidationError({"email": _("Account is disabled.")})
         refresh = RefreshToken.for_user(user)
         return {
             "access": str(refresh.access_token),

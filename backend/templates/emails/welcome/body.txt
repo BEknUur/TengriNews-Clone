@@ -1,0 +1,10 @@
+{% load i18n %}{% blocktrans with first_name=user.first_name %}Hi {{ first_name }},{% endblocktrans %}
+
+{% trans "Welcome to TengriNews." %}
+
+{% blocktrans with email=user.email %}Your account {{ email }} is ready.{% endblocktrans %}
+
+{% trans "You can now read news and customize your feed." %}
+
+{% trans "Best regards," %}
+{% trans "TengriNews Team" %}

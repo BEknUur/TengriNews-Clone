@@ -227,6 +227,7 @@ MIDDLEWARE = [
     "apps.abstracts.ratelimit.RateLimitMiddleware",
     "apps.abstracts.middleware.StructuredRequestLoggingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "apps.abstracts.locale_middleware.CustomLocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -238,7 +239,7 @@ MIDDLEWARE = [
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -286,6 +287,17 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
+
+# Internationalization configuration
+LANGUAGES = [
+    ("en", "English"),
+    ("kk", "Kazakh"),
+    ("ru", "Russian"),
+]
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, "locale"),
+]
 
 
 """
