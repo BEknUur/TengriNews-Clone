@@ -64,15 +64,9 @@ class TestCategoryViewSet:
     @pytest.mark.parametrize(
         argnames=["name", "slug", "expected_status"],
         argvalues=[
-<<<<<<< Updated upstream
             ("Tech", "tech", 400),  # duplicate — category fixture already has this
             ("Science", "science", 201),  # new — should succeed
         ],
-=======
-            ("Tech", "tech", 400),      
-            ("Science", "science", 201),  
-        ]
->>>>>>> Stashed changes
     )
     def test_create_parametrized(
         self,

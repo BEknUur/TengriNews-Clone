@@ -5,12 +5,14 @@ import logging
 import threading
 import time
 import uuid
+import contextvars
 from typing import Any
 
 from django.http import HttpRequest, HttpResponse
 
 logger = logging.getLogger("apps.requests")
 _request_state = threading.local()
+_request_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar("request_id", default=None)
 
 
 def get_current_user():
@@ -27,6 +29,20 @@ def clear_current_user() -> None:
     """Clear request-local user after response."""
     if hasattr(_request_state, "user"):
         delattr(_request_state, "user")
+
+
+def set_request_id(request_id: str) -> contextvars.Token:
+    """Store request_id in contextvar for the current context and return token."""
+    return _request_id_ctx.set(request_id)
+
+
+def get_request_id() -> str | None:
+    """Return request_id from contextvar if set."""
+    return _request_id_ctx.get()
+
+
+def clear_request_id(token: contextvars.Token) -> None:
+    _request_id_ctx.reset(token)
 
 
 class CurrentUserMiddleware:
@@ -53,27 +69,31 @@ class StructuredRequestLoggingMiddleware:
     def __call__(self, request: HttpRequest) -> HttpResponse:
         started_at = time.perf_counter()
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        # set request_id in context so other loggers can pick it up
+        token = set_request_id(request_id)
+        try:
+            response = self.get_response(request)
+            duration_ms = round((time.perf_counter() - started_at) * 1000, 2)
+            user = getattr(request, "user", None)
+            user_id = getattr(user, "id", None) if getattr(user, "is_authenticated", False) else None
 
-        response = self.get_response(request)
+            payload: dict[str, Any] = {
+                "event": "request_finished",
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.path,
+                "status_code": response.status_code,
+                "duration_ms": duration_ms,
+                "user_id": user_id,
+                "ip": self.get_client_ip(request),
+            }
 
-        duration_ms = round((time.perf_counter() - started_at) * 1000, 2)
-        user = getattr(request, "user", None)
-        user_id = getattr(user, "id", None) if getattr(user, "is_authenticated", False) else None
-
-        payload: dict[str, Any] = {
-            "event": "request_finished",
-            "request_id": request_id,
-            "method": request.method,
-            "path": request.path,
-            "status_code": response.status_code,
-            "duration_ms": duration_ms,
-            "user_id": user_id,
-            "ip": self.get_client_ip(request),
-        }
-
-        logger.info(json.dumps(payload, ensure_ascii=False))
-        response["X-Request-ID"] = request_id
-        return response
+            # log structured fields using extra; JsonFormatter will include extras
+            logger.info("request_finished", extra=payload)
+            response["X-Request-ID"] = request_id
+            return response
+        finally:
+            clear_request_id(token)
 
     def get_client_ip(self, request: HttpRequest) -> str | None:
         x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")

@@ -361,10 +361,9 @@ class ArticleViewSet(ViewSet, DRFResponseMixin, ViewSetWorkflowMixin):
     @require_permissions(IsAuthenticated)
     def create(self, request: DRFRequest) -> DRFResponse:
         """Create a new article. Authenticated users only."""
-        serializer = self.validate_request_serializer(
-            ArticleCreateUpdateSerializer,
-            request=request,
-            context={"request": request},
+        self.check_permissions(request)
+        serializer = ArticleCreateUpdateSerializer(
+            data=request.data, context={"request": request}
         )
         article = serializer.save()
         return self.serialize_to_response(
@@ -646,10 +645,9 @@ class CommentViewSet(ViewSet, ViewSetWorkflowMixin):
     @require_permissions(IsAuthenticated)
     def create(self, request: DRFRequest) -> DRFResponse:
         """Create a new comment. Authenticated users only."""
-        serializer = self.validate_request_serializer(
-            CommentCreateSerializer,
-            request=request,
-            context={"request": request},
+        IsAuthenticated().check_permission_or_deny(request)
+        serializer = CommentCreateSerializer(
+            data=request.data, context={"request": request}
         )
         comment = serializer.save()
         return self.serialize_to_response(
@@ -766,10 +764,9 @@ class ReactionViewSet(ViewSet, ViewSetWorkflowMixin):
     @require_permissions(IsAuthenticated)
     def create(self, request: DRFRequest) -> DRFResponse:
         """Create a reaction. Authenticated users only."""
-        serializer = self.validate_request_serializer(
-            ReactionSerializer,
-            request=request,
-            context={"request": request},
+        IsAuthenticated().check_permission_or_deny(request)
+        serializer = ReactionSerializer(
+            data=request.data, context={"request": request}
         )
         reaction = serializer.save(user=request.user)
         return self.serialize_to_response(
@@ -791,10 +788,11 @@ class ReactionViewSet(ViewSet, ViewSetWorkflowMixin):
     @require_permissions(IsAuthenticated)
     def destroy(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Delete a reaction. Reaction owner only."""
-        obj, error_response = self.get_object_or_404_response(Reaction.objects, pk=pk)
-        if error_response:
-            return error_response
-
+        IsAuthenticated().check_permission_or_deny(request)
+        try:
+            obj = Reaction.objects.get(pk=pk)
+        except Reaction.DoesNotExist:
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         if obj.user_id != request.user.pk:
             return DRFResponse(
                 {"detail": "Forbidden."}, status=HTTP_403_FORBIDDEN
@@ -817,6 +815,7 @@ class BookmarkViewSet(ViewSet, ViewSetWorkflowMixin):
     @require_permissions(IsAuthenticated)
     def list(self, request: DRFRequest) -> DRFResponse:
         """Return bookmarks for the authenticated user."""
+        IsAuthenticated().check_permission_or_deny(request)
         qs = (
             Bookmark.objects.filter(user=request.user, deleted_at__isnull=True)
             .select_related("article", "article__author", "article__category")

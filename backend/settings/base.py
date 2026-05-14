@@ -68,9 +68,9 @@ LOGGING = {
             "style": "{",
         },
         "json": {
-            "format": "{message}",
-            "style": "{",
-        },
+        "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+        "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+},
     },
     "filters": {
         "require_debug_true": {
@@ -81,7 +81,7 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "level": "DEBUG",
-            "formatter": "simple",
+            "formatter": "json",
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",

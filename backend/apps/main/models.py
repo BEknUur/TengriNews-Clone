@@ -167,6 +167,12 @@ class Reaction(AbstractTimeStamptModel):
         LOVE = "love", "Love"
         LAUGH = "laugh", "Laugh"
 
+    # Convenience constants for tests and external code
+    LIKE = ReactionType.LIKE
+    DISLIKE = ReactionType.DISLIKE
+    LOVE = ReactionType.LOVE
+    LAUGH = ReactionType.LAUGH
+
     user = ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=CASCADE,
