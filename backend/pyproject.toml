@@ -38,3 +38,6 @@ pythonpath = ["."]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+filterwarnings = [
+    "ignore:No directory at:.*backend/static/:UserWarning:django.core.handlers.base",
+]

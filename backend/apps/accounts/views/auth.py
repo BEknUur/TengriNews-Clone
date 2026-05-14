@@ -7,11 +7,16 @@ from typing import Any
 import logging
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response as DRFResponse
+from rest_framework.status import (
+    HTTP_200_OK,
+    HTTP_201_CREATED,
+    HTTP_400_BAD_REQUEST,
+    HTTP_500_INTERNAL_SERVER_ERROR,
+)
 from rest_framework.viewsets import ViewSet
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
@@ -32,9 +37,9 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         summary="Obtain JWT tokens",
         request=LoginSerializer,
         responses={
-            200: LoginSerializer,
-            400: OpenApiResponse(description="Invalid credentials"),
-            500: OpenApiResponse(description="Internal server error"),
+            HTTP_200_OK: LoginSerializer,
+            HTTP_400_BAD_REQUEST: OpenApiResponse(description="Invalid credentials"),
+            HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(description="Internal server error"),
         },
     )
     @action(methods=["post"], detail=False, url_path="token", url_name="token")
@@ -42,15 +47,15 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
     def login(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
         """Authenticate a user and return access + refresh tokens."""
         logger.info("Login: email=%s", request.data.get("email", "N/A"))
-        return DRFResponse(data=kwargs["validated_data"], status=status.HTTP_200_OK)
+        return DRFResponse(data=kwargs["validated_data"], status=HTTP_200_OK)
 
     @extend_schema(
         summary="Register a new user",
         request=RegistrationSerializer,
         responses={
-            201: RegistrationSerializer,
-            400: OpenApiResponse(description="Validation error"),
-            500: OpenApiResponse(description="Internal server error"),
+            HTTP_201_CREATED: RegistrationSerializer,
+            HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(description="Internal server error"),
         },
     )
     @action(methods=["post"], detail=False, url_path="register", url_name="register")
@@ -64,16 +69,16 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
             request=request,
             data=user,
             serializer_class=RegistrationSerializer,
-            status_code=status.HTTP_201_CREATED,
+            status_code=HTTP_201_CREATED,
         )
 
     @extend_schema(
         summary="Refresh access token",
         request=TokenRefreshSerializer,
         responses={
-            200: TokenRefreshSerializer,
-            400: OpenApiResponse(description="Invalid or expired refresh token"),
-            500: OpenApiResponse(description="Internal server error"),
+            HTTP_200_OK: TokenRefreshSerializer,
+            HTTP_400_BAD_REQUEST: OpenApiResponse(description="Invalid or expired refresh token"),
+            HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(description="Internal server error"),
         },
     )
     @action(
@@ -84,6 +89,6 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         serializer = TokenRefreshSerializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-            return DRFResponse(serializer.validated_data, status=status.HTTP_200_OK)
+            return DRFResponse(serializer.validated_data, status=HTTP_200_OK)
         except TokenError as exc:
             raise InvalidToken(exc.args[0])

@@ -8,12 +8,35 @@ from typing import Any, Callable, Optional, Type, TypeVar
 from django.db.models import Manager, Model, QuerySet
 
 # Django REST Framework
+from rest_framework.permissions import BasePermission
 from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response as DRFResponse
 from rest_framework.serializers import Serializer
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 
 T = TypeVar("T", bound=Model)
+
+
+def require_permissions(*permission_classes: Type[BasePermission]) -> Callable:
+    """Validate permissions before executing the wrapped view method."""
+
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(self, request: DRFRequest, *args: Any, **kwargs: Any) -> DRFResponse:
+            for permission_class in permission_classes:
+                permission = permission_class()
+                if not permission.has_permission(request, self):
+                    self.permission_denied(
+                        request,
+                        message=getattr(permission, "message", None),
+                        code=getattr(permission, "code", None),
+                    )
+
+            return func(self, request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 def validate_serializer_data(

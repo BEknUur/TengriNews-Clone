@@ -20,7 +20,7 @@ def reaction_on_article(db, user: CustomUser, article: Article) -> Reaction:
     return Reaction.objects.create(
         user=user,
         article=article,
-        type=Reaction.LIKE,
+        type=Reaction.ReactionType.LIKE,
     )
 
 
@@ -30,7 +30,7 @@ def reaction_on_comment(db, user: CustomUser, comment: Comment) -> Reaction:
     return Reaction.objects.create(
         user=user,
         comment=comment,
-        type=Reaction.LOVE,
+        type=Reaction.ReactionType.LOVE,
     )
 
 
@@ -65,8 +65,8 @@ class TestReactionViewSet:
         """Retrieve response contains correct reaction type."""
         response = api_client.get(f"/api/reactions/{reaction_on_article.pk}/")
         assert (
-            response.data["type"] == Reaction.LIKE
-        ), f"Expected type={Reaction.LIKE}, got {response.data.get('type')}"
+            response.data["type"] == Reaction.ReactionType.LIKE
+        ), f"Expected type={Reaction.ReactionType.LIKE}, got {response.data.get('type')}"
 
     def test_retrieve_not_found_returns_404(self, api_client) -> None:
         """GET /api/reactions/9999/ returns 404."""
@@ -79,7 +79,7 @@ class TestReactionViewSet:
         self, auth_client, article: Article
     ) -> None:
         """POST /api/reactions/ with article target returns 201."""
-        payload = {"article": article.pk, "type": Reaction.LIKE}
+        payload = {"article": article.pk, "type": Reaction.ReactionType.LIKE}
         response = auth_client.post("/api/reactions/", payload)
         assert (
             response.status_code == 201
@@ -89,7 +89,7 @@ class TestReactionViewSet:
         self, auth_client, comment: Comment
     ) -> None:
         """POST /api/reactions/ with comment target returns 201."""
-        payload = {"comment": comment.pk, "type": Reaction.LOVE}
+        payload = {"comment": comment.pk, "type": Reaction.ReactionType.LOVE}
         response = auth_client.post("/api/reactions/", payload)
         assert (
             response.status_code == 201
@@ -100,7 +100,7 @@ class TestReactionViewSet:
     ) -> None:
         """POST /api/reactions/ without token returns 401."""
         response = api_client.post(
-            "/api/reactions/", {"article": article.pk, "type": Reaction.LIKE}
+            "/api/reactions/", {"article": article.pk, "type": Reaction.ReactionType.LIKE}
         )
         assert response.status_code == 401, f"Expected 401, got {response.status_code}"
 
@@ -108,7 +108,7 @@ class TestReactionViewSet:
         self, auth_client, reaction_on_article: Reaction, article: Article
     ) -> None:
         """POST /api/reactions/ duplicate reaction on same article returns 400."""
-        payload = {"article": article.pk, "type": Reaction.DISLIKE}
+        payload = {"article": article.pk, "type": Reaction.ReactionType.DISLIKE}
         response = auth_client.post("/api/reactions/", payload)
         assert (
             response.status_code == 400
@@ -118,7 +118,7 @@ class TestReactionViewSet:
         self, auth_client, article: Article, comment: Comment
     ) -> None:
         """POST /api/reactions/ with both article and comment returns 400."""
-        payload = {"article": article.pk, "comment": comment.pk, "type": Reaction.LIKE}
+        payload = {"article": article.pk, "comment": comment.pk, "type": Reaction.ReactionType.LIKE}
         response = auth_client.post("/api/reactions/", payload)
         assert (
             response.status_code == 400
@@ -126,7 +126,7 @@ class TestReactionViewSet:
 
     def test_create_no_target_returns_400(self, auth_client) -> None:
         """POST /api/reactions/ with no target returns 400."""
-        payload = {"type": Reaction.LIKE}
+        payload = {"type": Reaction.ReactionType.LIKE}
         response = auth_client.post("/api/reactions/", payload)
         assert (
             response.status_code == 400
@@ -135,10 +135,10 @@ class TestReactionViewSet:
     @pytest.mark.parametrize(
         argnames=["reaction_type", "expected_status"],
         argvalues=[
-            (Reaction.LIKE, 201),
-            (Reaction.DISLIKE, 201),
-            (Reaction.LOVE, 201),
-            (Reaction.LAUGH, 201),
+            (Reaction.ReactionType.LIKE, 201),
+            (Reaction.ReactionType.DISLIKE, 201),
+            (Reaction.ReactionType.LOVE, 201),
+            (Reaction.ReactionType.LAUGH, 201),
             ("invalid_type", 400),
         ],
     )

@@ -5,6 +5,7 @@ from typing import Any
 import logging
 
 # Django modules
+from django.conf import settings
 from django.db import transaction
 
 # Third-party modules
@@ -54,6 +55,9 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
 
     def get_throttles(self) -> list[BaseThrottle]:
         """Assign scoped throttle rates for login/register actions."""
+        if getattr(settings, "DISABLE_AUTH_THROTTLING", False):
+            return []
+
         if self.action == "login":
             self.throttle_scope = "auth_login"
         elif self.action == "register":

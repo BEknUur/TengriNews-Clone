@@ -1,6 +1,5 @@
 # Project modules
 from settings.base import *  # noqa: F403
-from settings.conf import REDIS_HOST, REDIS_PORT, REDIS_DB
 
 DEBUG: bool = True
 
@@ -20,10 +19,20 @@ DATABASES: dict = {
 # Caching configuration
 CACHES: dict = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "tengrinews-local-cache",
     }
 }
+
+# Use eager Celery tasks in local/test mode to avoid broker dependency.
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
+
+# Keep local/test API runs deterministic without throttle state bleed.
+REST_FRAMEWORK = {
+    **REST_FRAMEWORK,  # type: ignore[name-defined] # noqa: F405
+    "DEFAULT_THROTTLE_CLASSES": [],
+    "DEFAULT_THROTTLE_RATES": {},
+}
+
+DISABLE_AUTH_THROTTLING = True
