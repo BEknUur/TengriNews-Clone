@@ -63,13 +63,12 @@ LOGGING = {
             "style": "{",
         },
         "verbose": {
-            "format": "[{asctime}] {levelname} "
-            "{name} {module}.{funcName}: {lineno} - {message}",
+            "format": "[{asctime}] {levelname} {name} {module}.{funcName}:{lineno} - {message}",
             "style": "{",
         },
         "json": {
-            "format": "{message}",
-            "style": "{",
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
         },
     },
     "filters": {
@@ -81,22 +80,22 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "level": "DEBUG",
-            "formatter": "simple",
+            "formatter": "json",
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "WARNING",
             "filename": "logs/app.log",
-            "maxBytes": 5 * 1024 * 1024,  # 10 MB
-            "backupCount": 3,
+            "maxBytes": 5 * 1024 * 1024,  # 5 MB
+            "backupCount": 5,
             "formatter": "verbose",
             "encoding": "utf-8",
         },
         "debug_only": {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "DEBUG",
-            "filename": "logs/debug_requests.log",
-            "maxBytes": 5 * 1024 * 1024,  # 10 MB
+            "filename": "logs/debug.log",
+            "maxBytes": 5 * 1024 * 1024,  # 5 MB
             "backupCount": 3,
             "formatter": "verbose",
             "filters": ["require_debug_true"],
@@ -106,30 +105,45 @@ LOGGING = {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "INFO",
             "filename": "logs/requests.jsonl",
-            "maxBytes": 5 * 1024 * 1024,
-            "backupCount": 3,
+            "maxBytes": 5 * 1024 * 1024,  # 5 MB
+            "backupCount": 5,
             "formatter": "json",
             "encoding": "utf-8",
         },
     },
     "loggers": {
-        "apps.users": {
+        "apps.accounts": {
             "handlers": ["console", "file"],
-            "level": "DEBUG",
+            "level": "INFO",
             "propagate": False,
         },
-        "apps.blog": {
+        "apps.main": {
             "handlers": ["console", "file"],
-            "level": "DEBUG",
+            "level": "INFO",
             "propagate": False,
         },
-        "django.request": {
-            "handlers": ["file", "debug_only"],
-            "level": "WARNING",
+        "apps.core": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
             "propagate": False,
         },
         "apps.requests": {
             "handlers": ["console", "request_json_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "celery": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "celery.task": {
+            "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": False,
         },
@@ -173,6 +187,11 @@ REST_FRAMEWORK = {
         "user": "1000/hour",
         "auth_login": "5/minute",
         "auth_register": "10/hour",
+        "article_create": "20/hour",
+        "comment_create": "30/hour",
+        "reaction": "60/hour",
+        "bookmark": "120/hour",
+        "article_view": "300/hour",
     },
 }
 

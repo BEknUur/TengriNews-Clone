@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# Python modules
+import logging
+
 # Third-party modules
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import AllowAny
@@ -20,17 +23,24 @@ from rest_framework.viewsets import ViewSet
 # Project modules
 from apps.core.decorators import require_permissions
 from apps.core.mixins import ViewSetWorkflowMixin
+from apps.core.throttling import ActionThrottleMixin
 from apps.main.models import Category
 from apps.main.permissions import IsAdminOnly
 from apps.main.serializers import CategorySerializer
 
 
-class CategoryViewSet(ViewSet, ViewSetWorkflowMixin):
+logger = logging.getLogger(__name__)
+
+
+class CategoryViewSet(ActionThrottleMixin, ViewSet, ViewSetWorkflowMixin):
     """CRUD operations for article categories."""
     permission_classes = [AllowAny]
+    queryset = Category.objects.none()
 
     @extend_schema(
+        tags=["Categories"],
         summary="List all categories",
+        description="Returns all categories. Public endpoint.",
         responses={
             HTTP_200_OK: CategorySerializer(many=True),
             HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(description="Internal server error"),
@@ -47,7 +57,9 @@ class CategoryViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Categories"],
         summary="Retrieve a category",
+        description="Returns a single category by ID. Public endpoint.",
         responses={
             HTTP_200_OK: CategorySerializer,
             HTTP_404_NOT_FOUND: OpenApiResponse(description="Not found"),
@@ -69,7 +81,9 @@ class CategoryViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Categories"],
         summary="Create a category",
+        description="Creates a new category. Admin only.",
         request=CategorySerializer,
         responses={
             HTTP_201_CREATED: CategorySerializer,
@@ -87,6 +101,7 @@ class CategoryViewSet(ViewSet, ViewSetWorkflowMixin):
             request=request,
         )
         category = serializer.save()
+        logger.info('Category created: id=%s by user_id=%s', category.pk, request.user.pk)
         return self.serialize_to_response(
             serializer_class=CategorySerializer,
             instance=category,
@@ -94,7 +109,9 @@ class CategoryViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Categories"],
         summary="Partially update a category",
+        description="Partially updates an existing category. Admin only.",
         request=CategorySerializer,
         responses={
             HTTP_200_OK: CategorySerializer,
@@ -119,6 +136,7 @@ class CategoryViewSet(ViewSet, ViewSetWorkflowMixin):
             partial=True,
         )
         category = serializer.save()
+        logger.info('Category updated: id=%s by user_id=%s', category.pk, request.user.pk)
         return self.serialize_to_response(
             serializer_class=CategorySerializer,
             instance=category,
@@ -126,7 +144,9 @@ class CategoryViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Categories"],
         summary="Delete a category",
+        description="Deletes a category permanently. Admin only.",
         responses={
             HTTP_204_NO_CONTENT: OpenApiResponse(description="Deleted"),
             HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Unauthorized"),
@@ -143,4 +163,5 @@ class CategoryViewSet(ViewSet, ViewSetWorkflowMixin):
             return error_response
 
         obj.delete()
+        logger.info('Category deleted: id=%s by user_id=%s', pk, request.user.pk)
         return DRFResponse(status=HTTP_204_NO_CONTENT)

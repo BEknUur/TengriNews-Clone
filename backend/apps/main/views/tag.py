@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# Python modules
+import logging
+
 # Third-party modules
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import AllowAny
@@ -20,17 +23,24 @@ from rest_framework.viewsets import ViewSet
 # Project modules
 from apps.core.decorators import require_permissions
 from apps.core.mixins import ViewSetWorkflowMixin
+from apps.core.throttling import ActionThrottleMixin
 from apps.main.models import Tag
 from apps.main.permissions import IsAdminOnly
 from apps.main.serializers import TagSerializer
 
 
-class TagViewSet(ViewSet, ViewSetWorkflowMixin):
+logger = logging.getLogger(__name__)
+
+
+class TagViewSet(ActionThrottleMixin, ViewSet, ViewSetWorkflowMixin):
     """CRUD operations for article tags."""
     permission_classes = [AllowAny]
+    queryset = Tag.objects.none()
 
     @extend_schema(
+        tags=["Tags"],
         summary="List all tags",
+        description="Returns all tags. Public endpoint.",
         responses={
             HTTP_200_OK: TagSerializer(many=True),
             HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(description="Internal server error"),
@@ -47,7 +57,9 @@ class TagViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Tags"],
         summary="Retrieve a tag",
+        description="Returns a single tag by ID. Public endpoint.",
         responses={
             HTTP_200_OK: TagSerializer,
             HTTP_404_NOT_FOUND: OpenApiResponse(description="Not found"),
@@ -67,7 +79,9 @@ class TagViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Tags"],
         summary="Create a tag",
+        description="Creates a new tag. Admin only.",
         request=TagSerializer,
         responses={
             HTTP_201_CREATED: TagSerializer,
@@ -85,6 +99,7 @@ class TagViewSet(ViewSet, ViewSetWorkflowMixin):
             request=request,
         )
         tag = serializer.save()
+        logger.info('Tag created: id=%s by user_id=%s', tag.pk, request.user.pk)
         return self.serialize_to_response(
             serializer_class=TagSerializer,
             instance=tag,
@@ -92,7 +107,9 @@ class TagViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Tags"],
         summary="Partially update a tag",
+        description="Partially updates an existing tag. Admin only.",
         request=TagSerializer,
         responses={
             HTTP_200_OK: TagSerializer,
@@ -117,6 +134,7 @@ class TagViewSet(ViewSet, ViewSetWorkflowMixin):
             partial=True,
         )
         tag = serializer.save()
+        logger.info('Tag updated: id=%s by user_id=%s', tag.pk, request.user.pk)
         return self.serialize_to_response(
             serializer_class=TagSerializer,
             instance=tag,
@@ -124,7 +142,9 @@ class TagViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Tags"],
         summary="Delete a tag",
+        description="Deletes a tag permanently. Admin only.",
         responses={
             HTTP_204_NO_CONTENT: OpenApiResponse(description="Deleted"),
             HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Unauthorized"),
@@ -141,4 +161,5 @@ class TagViewSet(ViewSet, ViewSetWorkflowMixin):
             return error_response
 
         obj.delete()
+        logger.info('Tag deleted: id=%s by user_id=%s', pk, request.user.pk)
         return DRFResponse(status=HTTP_204_NO_CONTENT)

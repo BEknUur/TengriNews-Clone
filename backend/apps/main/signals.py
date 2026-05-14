@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # Python modules
+import logging
 from typing import Any
 
 # Django modules
@@ -12,6 +13,8 @@ from apps.core.middleware import get_current_user
 from apps.main.models import Article, ArticleAuditLog, Comment
 from apps.main.realtime import broadcast_article_created, broadcast_comment_created
 
+logger = logging.getLogger(__name__)
+
 
 @receiver(post_save, sender=Article)
 def notify_article_created(
@@ -20,8 +23,9 @@ def notify_article_created(
     created: bool,
     **kwargs: dict[str, Any],
 ) -> None:
-    """Execute notify article created logic and return its result."""
+    """Broadcast WebSocket event when a new article is published."""
     if created:
+        logger.debug("Broadcasting article_created event: id=%s", instance.pk)
         broadcast_article_created(instance)
 
 
@@ -32,8 +36,9 @@ def notify_comment_created(
     created: bool,
     **kwargs: dict[str, Any],
 ) -> None:
-    """Execute notify comment created logic and return its result."""
+    """Broadcast WebSocket event when a new comment is posted."""
     if created:
+        logger.debug("Broadcasting comment_created event: id=%s article_id=%s", instance.pk, instance.article_id)
         broadcast_comment_created(instance)
 
 
@@ -59,11 +64,11 @@ def write_article_audit_log(
     **kwargs: dict[str, Any],
 ) -> None:
     """Create audit log after Article create/update."""
+    action = ArticleAuditLog.Action.CREATED if created else ArticleAuditLog.Action.UPDATED
     ArticleAuditLog.objects.create(
         article=instance,
         actor=get_current_user(),
-        action=ArticleAuditLog.Action.CREATED
-        if created
-        else ArticleAuditLog.Action.UPDATED,
+        action=action,
         snapshot=build_article_snapshot(instance),
     )
+    logger.debug("Audit log written: article_id=%s action=%s", instance.pk, action)

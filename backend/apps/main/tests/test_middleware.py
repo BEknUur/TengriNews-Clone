@@ -1,5 +1,4 @@
 # Python modules
-import json
 import logging
 from typing import Any
 
@@ -22,18 +21,18 @@ def test_structured_logging_middleware_logs_request(auth_client: Any, caplog: An
         assert "X-Request-ID" in response
 
         records = [
-            record.message
+            record
             for record in caplog.records
-            if "request_finished" in record.message
+            if getattr(record, "event", None) == "request_finished"
         ]
-        assert records
+        assert records, "No request_finished log record found"
 
-        payload = json.loads(records[-1])
-        assert payload["event"] == "request_finished"
-        assert payload["method"] == "GET"
-        assert payload["path"] == "/api/articles/"
-        assert payload["status_code"] == 200
-        assert "duration_ms" in payload
-        assert "ip" in payload
+        record = records[-1]
+        assert record.event == "request_finished"
+        assert record.method == "GET"
+        assert record.path == "/api/articles/"
+        assert record.status_code == 200
+        assert hasattr(record, "duration_ms")
+        assert hasattr(record, "ip")
     finally:
         logger.removeHandler(caplog.handler)

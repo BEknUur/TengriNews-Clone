@@ -53,6 +53,7 @@ class Category(AbstractTimeStamptModel):
 
     class Meta:
         """Meta class."""
+
         verbose_name = "category"
         verbose_name_plural = "categories"
         ordering = ["name"]
@@ -74,6 +75,7 @@ class Tag(AbstractTimeStamptModel):
 
     class Meta:
         """Meta class."""
+
         ordering = ["name"]
 
     def __str__(self) -> str:
@@ -110,6 +112,7 @@ class Article(AbstractTimeStamptModel):
 
     class Meta:
         """Meta class."""
+
         ordering = ["-published_at", "-id"]
         indexes = [
             Index(fields=["published_at", "id"]),
@@ -157,6 +160,7 @@ class Comment(AbstractTimeStamptModel):
 
     class Meta:
         """Meta class."""
+
         ordering = ["created_at"]
 
     def clean(self) -> None:
@@ -178,10 +182,16 @@ class Reaction(AbstractTimeStamptModel):
 
     class ReactionType(TextChoices):
         """ReactionType class."""
+
         LIKE = "like", "Like"
         DISLIKE = "dislike", "Dislike"
         LOVE = "love", "Love"
         LAUGH = "laugh", "Laugh"
+
+    LIKE = ReactionType.LIKE
+    DISLIKE = ReactionType.DISLIKE
+    LOVE = ReactionType.LOVE
+    LAUGH = ReactionType.LAUGH
 
     user = ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -206,6 +216,7 @@ class Reaction(AbstractTimeStamptModel):
 
     class Meta:
         """Meta class."""
+
         constraints = [
             UniqueConstraint(
                 fields=["user", "article"],
@@ -252,6 +263,7 @@ class Bookmark(AbstractTimeStamptModel):
 
     class Meta:
         """Meta class."""
+
         ordering = ["-created_at"]
         constraints = [
             UniqueConstraint(
@@ -275,6 +287,7 @@ class ArticleAuditLog(AbstractTimeStamptModel):
 
     class Action(TextChoices):
         """Action class."""
+
         CREATED = "created", "Created"
         UPDATED = "updated", "Updated"
 
@@ -296,6 +309,7 @@ class ArticleAuditLog(AbstractTimeStamptModel):
 
     class Meta:
         """Meta class."""
+
         ordering = ["-created_at"]
         indexes = [
             Index(fields=["article", "-created_at"]),

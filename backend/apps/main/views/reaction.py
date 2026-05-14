@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# Python modules
+import logging
+
 # Third-party modules
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -20,16 +23,23 @@ from rest_framework.viewsets import ViewSet
 # Project modules
 from apps.core.decorators import require_permissions
 from apps.core.mixins import ViewSetWorkflowMixin
+from apps.core.throttling import ActionThrottleMixin, throttle_scope
 from apps.main.models import Reaction
 from apps.main.serializers import ReactionSerializer
 
 
-class ReactionViewSet(ViewSet, ViewSetWorkflowMixin):
+logger = logging.getLogger(__name__)
+
+
+class ReactionViewSet(ActionThrottleMixin, ViewSet, ViewSetWorkflowMixin):
     """CRUD operations for reactions."""
     permission_classes = [AllowAny]
+    queryset = Reaction.objects.none()
 
     @extend_schema(
+        tags=["Reactions"],
         summary="List all reactions",
+        description="Returns all reactions. Public endpoint.",
         responses={
             HTTP_200_OK: ReactionSerializer(many=True),
             HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(description="Internal server error"),
@@ -46,7 +56,9 @@ class ReactionViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Reactions"],
         summary="Retrieve a reaction",
+        description="Returns a single reaction by ID. Public endpoint.",
         responses={
             HTTP_200_OK: ReactionSerializer,
             HTTP_404_NOT_FOUND: OpenApiResponse(description="Not found"),
@@ -66,7 +78,9 @@ class ReactionViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Reactions"],
         summary="Create a reaction",
+        description="Creates a reaction on an article or comment. Requires authentication.",
         request=ReactionSerializer,
         responses={
             HTTP_201_CREATED: ReactionSerializer,
@@ -75,6 +89,7 @@ class ReactionViewSet(ViewSet, ViewSetWorkflowMixin):
             HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(description="Internal server error"),
         },
     )
+    @throttle_scope("reaction")
     @require_permissions(IsAuthenticated)
     def create(self, request: DRFRequest) -> DRFResponse:
         """Create a reaction. Authenticated users only."""
@@ -91,7 +106,9 @@ class ReactionViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Reactions"],
         summary="Delete a reaction",
+        description="Deletes a reaction. Only the reaction owner can do this.",
         responses={
             HTTP_204_NO_CONTENT: OpenApiResponse(description="Deleted"),
             HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Unauthorized"),
@@ -112,4 +129,5 @@ class ReactionViewSet(ViewSet, ViewSetWorkflowMixin):
                 {"detail": "Forbidden."}, status=HTTP_403_FORBIDDEN
             )
         obj.delete()
+        logger.info('Reaction deleted: id=%s by user_id=%s', pk, request.user.pk)
         return DRFResponse(status=HTTP_204_NO_CONTENT)

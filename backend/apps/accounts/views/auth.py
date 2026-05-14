@@ -66,7 +66,9 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         return super().get_throttles()
 
     @extend_schema(
+        tags=["Auth"],
         summary="Obtain JWT tokens",
+        description="Authenticates with email and password and returns access + refresh JWT tokens. Rate limited.",
         request=LoginRequestSerializer,
         responses={
             HTTP_200_OK: TokenPairResponseSerializer,
@@ -83,7 +85,9 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         return DRFResponse(data=kwargs["validated_data"], status=HTTP_200_OK)
 
     @extend_schema(
+        tags=["Auth"],
         summary="Register a new user",
+        description="Creates a new user account and returns JWT tokens. Sends a welcome email asynchronously. Rate limited.",
         request=RegisterRequestSerializer,
         responses={
             HTTP_201_CREATED: RegisterResponseSerializer,
@@ -108,7 +112,9 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         )
 
     @extend_schema(
+        tags=["Auth"],
         summary="Refresh access token",
+        description="Exchanges a valid refresh token for a new access token.",
         request=RefreshTokenRequestSerializer,
         responses={
             HTTP_200_OK: AccessTokenResponseSerializer,

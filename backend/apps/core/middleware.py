@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 # Python modules
-import json
+import contextvars
 import logging
 import threading
 import time
@@ -12,7 +12,9 @@ from typing import Any
 from django.http import HttpRequest, HttpResponse
 
 logger = logging.getLogger("apps.requests")
+
 request_state = threading.local()
+request_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar("request_id", default=None)
 
 
 def get_client_ip(request: Any) -> str | None:
@@ -43,15 +45,28 @@ def clear_current_user() -> None:
         delattr(request_state, "user")
 
 
+def set_request_id(request_id: str) -> contextvars.Token:
+    """Store request_id in a contextvar for the current async/thread context."""
+    return request_id_ctx.set(request_id)
+
+
+def get_request_id() -> str | None:
+    """Return the current request_id, or None if not set."""
+    return request_id_ctx.get()
+
+
+def clear_request_id(token: contextvars.Token) -> None:
+    """Reset the request_id contextvar to its previous value."""
+    request_id_ctx.reset(token)
+
+
 class CurrentUserMiddleware:
     """Expose request.user to model signal handlers in the current thread."""
 
     def __init__(self, get_response: Any) -> None:
-        """Initialize instance."""
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        """Process the incoming request and return the resulting response."""
         user = getattr(request, "user", None)
         set_current_user(user if getattr(user, "is_authenticated", False) else None)
         try:
@@ -64,35 +79,32 @@ class StructuredRequestLoggingMiddleware:
     """Log request/response metadata as structured JSON."""
 
     def __init__(self, get_response: Any) -> None:
-        """Initialize instance."""
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        """Process the incoming request and return the resulting response."""
         started_at = time.perf_counter()
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        token = set_request_id(request_id)
+        try:
+            response = self.get_response(request)
+            duration_ms = round((time.perf_counter() - started_at) * 1000, 2)
+            user = getattr(request, "user", None)
+            user_id = getattr(user, "id", None) if getattr(user, "is_authenticated", False) else None
 
-        response = self.get_response(request)
-
-        duration_ms = round((time.perf_counter() - started_at) * 1000, 2)
-        user = getattr(request, "user", None)
-        user_id = (
-            getattr(user, "id", None)
-            if getattr(user, "is_authenticated", False)
-            else None
-        )
-
-        payload: dict[str, Any] = {
-            "event": "request_finished",
-            "request_id": request_id,
-            "method": request.method,
-            "path": request.path,
-            "status_code": response.status_code,
-            "duration_ms": duration_ms,
-            "user_id": user_id,
-            "ip": get_client_ip(request),
-        }
-
-        logger.info(json.dumps(payload, ensure_ascii=False))
-        response["X-Request-ID"] = request_id
-        return response
+            logger.info(
+                "request_finished",
+                extra={
+                    "event": "request_finished",
+                    "request_id": request_id,
+                    "method": request.method,
+                    "path": request.path,
+                    "status_code": response.status_code,
+                    "duration_ms": duration_ms,
+                    "user_id": user_id,
+                    "ip": get_client_ip(request),
+                },
+            )
+            response["X-Request-ID"] = request_id
+            return response
+        finally:
+            clear_request_id(token)

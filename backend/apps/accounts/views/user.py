@@ -24,6 +24,7 @@ from rest_framework.viewsets import ViewSet
 # Project modules
 from apps.core.decorators import require_permissions
 from apps.core.mixins import ViewSetWorkflowMixin
+from apps.core.throttling import ActionThrottleMixin
 from apps.accounts.models import CustomUser
 from apps.accounts.schema_serializers import (
     UserCreateRequestSerializer,
@@ -35,6 +36,9 @@ from apps.accounts.serializers import UserSerializer, UserUpdateSerializer
 
 @extend_schema_view(
     list=extend_schema(
+        tags=["Users"],
+        summary="List all users",
+        description="Returns all users ordered by ID. Admin only.",
         request=None,
         responses={
             HTTP_200_OK: UserResponseSerializer(many=True),
@@ -44,6 +48,9 @@ from apps.accounts.serializers import UserSerializer, UserUpdateSerializer
         },
     ),
     retrieve=extend_schema(
+        tags=["Users"],
+        summary="Retrieve a user",
+        description="Returns a single user by ID. Admin only.",
         request=None,
         responses={
             HTTP_200_OK: UserResponseSerializer,
@@ -54,6 +61,9 @@ from apps.accounts.serializers import UserSerializer, UserUpdateSerializer
         },
     ),
     create=extend_schema(
+        tags=["Users"],
+        summary="Create a user",
+        description="Creates a new user account. Requires authentication.",
         request=UserCreateRequestSerializer,
         responses={
             HTTP_201_CREATED: UserResponseSerializer,
@@ -62,6 +72,9 @@ from apps.accounts.serializers import UserSerializer, UserUpdateSerializer
         },
     ),
     partial_update=extend_schema(
+        tags=["Users"],
+        summary="Partially update a user",
+        description="Partially updates a user. Requires authentication.",
         request=UserPatchRequestSerializer,
         responses={
             HTTP_200_OK: UserResponseSerializer,
@@ -71,6 +84,9 @@ from apps.accounts.serializers import UserSerializer, UserUpdateSerializer
         },
     ),
     update=extend_schema(
+        tags=["Users"],
+        summary="Fully update a user",
+        description="Fully replaces a user's data. Requires authentication.",
         request=UserCreateRequestSerializer,
         responses={
             HTTP_200_OK: UserResponseSerializer,
@@ -80,6 +96,9 @@ from apps.accounts.serializers import UserSerializer, UserUpdateSerializer
         },
     ),
     destroy=extend_schema(
+        tags=["Users"],
+        summary="Delete a user",
+        description="Permanently deletes a user account. Requires authentication.",
         request=None,
         responses={
             HTTP_204_NO_CONTENT: OpenApiResponse(description="User deleted"),
@@ -88,8 +107,10 @@ from apps.accounts.serializers import UserSerializer, UserUpdateSerializer
         },
     ),
 )
-class UserViewSet(ViewSet, ViewSetWorkflowMixin):
+class UserViewSet(ActionThrottleMixin, ViewSet, ViewSetWorkflowMixin):
     """CRUD for user accounts (admin-facing) and self-service profile."""
+    queryset = CustomUser.objects.none()
+    serializer_class = UserSerializer
 
     @require_permissions(IsAdminUser)
     def list(self, request: DRFRequest) -> DRFResponse:
@@ -179,7 +200,9 @@ class UserViewSet(ViewSet, ViewSetWorkflowMixin):
         return DRFResponse(status=HTTP_204_NO_CONTENT)
 
     @extend_schema(
+        tags=["Users"],
         summary="Current user profile",
+        description="Returns the profile of the currently authenticated user.",
         request=None,
         responses={
             HTTP_200_OK: UserResponseSerializer,
@@ -202,7 +225,9 @@ class UserViewSet(ViewSet, ViewSetWorkflowMixin):
         )
 
     @extend_schema(
+        tags=["Users"],
         summary="Update current user profile",
+        description="Updates the profile fields (first_name, last_name, avatar) of the currently authenticated user.",
         request=UserPatchRequestSerializer,
         responses={
             HTTP_200_OK: UserResponseSerializer,
