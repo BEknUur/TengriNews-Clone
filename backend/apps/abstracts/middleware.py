@@ -9,6 +9,68 @@ import contextvars
 from typing import Any
 
 from django.http import HttpRequest, HttpResponse
+from django.utils import translation
+
+
+class CustomLocaleMiddleware:
+    """Determine and activate language for each request.
+
+    Priority:
+    1) Authenticated user `preferred_language` attribute
+    2) `App-Language` header
+    3) `Accept-Language` header
+    4) Default 'en'
+    """
+
+    SUPPORTED_LANGUAGES = {"en", "ru", "kk"}
+    DEFAULT_LANGUAGE = "en"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        lang = self._determine_language(request)
+        translation.activate(lang)
+        setattr(request, "LANGUAGE_CODE", lang)
+
+        response = self.get_response(request)
+        response.headers.setdefault("Content-Language", lang)
+
+        translation.deactivate()
+        return response
+
+    def _determine_language(self, request: HttpRequest) -> str:
+        user = getattr(request, "user", None)
+        if user and getattr(user, "is_authenticated", False):
+            pref = getattr(user, "preferred_language", None)
+            norm = self._normalize(pref)
+            if norm:
+                return norm
+
+        header_lang = request.headers.get("App-Language") or request.GET.get("lang")
+        norm = self._normalize(header_lang)
+        if norm:
+            return norm
+
+        accepted = request.headers.get("Accept-Language", "")
+        for part in accepted.split(','):
+            value = part.split(';', 1)[0].strip()
+            norm = self._normalize(value)
+            if norm:
+                return norm
+
+        return self.DEFAULT_LANGUAGE
+
+    def _normalize(self, value: str | None) -> str | None:
+        if not value:
+            return None
+        v = value.lower().replace('_', '-').strip()
+        if v in self.SUPPORTED_LANGUAGES:
+            return v
+        base = v.split('-', 1)[0]
+        if base in self.SUPPORTED_LANGUAGES:
+            return base
+        return None
 
 logger = logging.getLogger("apps.requests")
 _request_state = threading.local()

@@ -18,6 +18,7 @@ class UserSerializer(ModelSerializer):
             "first_name",
             "last_name",
             "role",
+            "preferred_language",
             "avatar",
             "is_staff",
             "is_superuser",
@@ -31,4 +32,4 @@ class UserUpdateSerializer(ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields: tuple[str, ...] = ("first_name", "last_name", "avatar")
+        fields: tuple[str, ...] = ("first_name", "last_name", "preferred_language", "avatar")

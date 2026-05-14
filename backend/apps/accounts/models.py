@@ -28,6 +28,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin, AbstractTimeStamptModel):
         email: unique login identifier.
         first_name / last_name: display name parts.
         role: ADMIN | EDITOR | USER.
+        preferred_language: user's preferred language (en, kk, ru).
         is_active / is_staff: standard Django flags.
         date_joined: set automatically on creation.
         avatar: optional profile picture.
@@ -38,6 +39,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin, AbstractTimeStamptModel):
         EDITOR = "EDITOR", "Editor"
         USER = "USER", "User"
 
+    class Language(TextChoices):
+        ENGLISH = "en", "English"
+        KAZAKH = "kk", "Kazakh"
+        RUSSIAN = "ru", "Russian"
+
     email = EmailField(unique=True)
     first_name = CharField(max_length=FIRST_NAME_MAX_LENGTH)
     last_name = CharField(max_length=LAST_NAME_MAX_LENGTH)
@@ -45,6 +51,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin, AbstractTimeStamptModel):
         max_length=ROLE_MAX_LENGTH,
         choices=Role.choices,
         default=Role.USER,
+    )
+    preferred_language = CharField(
+        max_length=5,
+        choices=Language.choices,
+        default=Language.ENGLISH,
     )
     is_active = BooleanField(default=True)
     is_staff = BooleanField(default=False)

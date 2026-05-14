@@ -1,0 +1,1 @@
+{% load i18n %}{% blocktrans with first_name=user.first_name %}Welcome to TengriNews, {{ first_name }}!{% endblocktrans %}

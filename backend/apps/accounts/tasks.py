@@ -2,6 +2,8 @@
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.translation import override, gettext as _
 
 # Third-party modules
 from celery import shared_task
@@ -33,14 +35,19 @@ def send_welcome_email_task(self, user_id: int) -> str | Exception:
     if not cache.add(lock_key, "1", timeout=300):
         return f"Task for user {user_id} is already running."
     try:
+        user_lang = getattr(user, "preferred_language", None) or "en"
+        with override(user_lang):
+            subject = render_to_string("emails/welcome/subject.txt", {"user": user}).strip()
+            message = render_to_string("emails/welcome/body.txt", {"user": user})
+
         send_mail(
-            subject=f"Welcome to Our App {user.first_name}!",
-            message="Thank you for signing up on TengriNews! We're excited to have you on board. If you have any questions, feel free to reach out to our support team.",
+            subject=subject,
+            message=message,
             from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@tengrinews.kz"),
             recipient_list=[user.email],
         )
         cache.set(done_key, "1", timeout=60 * 60 * 24)
-        return f"Welcome email for user {user_id} has been sent."
+        return _("Welcome email for user %(user_id)s has been sent.") % {"user_id": user_id}
     except Exception as e:
         raise e
     finally:
