@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 NEWS_GROUP_NAME = "news_notifications"
 
 
-def _broadcast(event_type: str, payload: dict[str, Any]) -> None:
+def broadcast(event_type: str, payload: dict[str, Any]) -> None:
     """Run the internal helper that handles broadcast."""
     channel_layer = get_channel_layer()
     if channel_layer is None:
@@ -34,7 +34,7 @@ def _broadcast(event_type: str, payload: dict[str, Any]) -> None:
         logger.exception("Failed to broadcast %s event.", event_type)
 
 
-def _user_payload(user: Any) -> dict[str, Any] | None:
+def user_payload(user: Any) -> dict[str, Any] | None:
     """Run the internal helper that handles user payload."""
     if user is None:
         return None
@@ -48,7 +48,7 @@ def _user_payload(user: Any) -> dict[str, Any] | None:
 
 def broadcast_article_created(article: "Article") -> None:  # noqa: F821
     """Broadcast an article creation event."""
-    _broadcast(
+    broadcast(
         "article_created",
         {
             "id": article.id,
@@ -56,7 +56,7 @@ def broadcast_article_created(article: "Article") -> None:  # noqa: F821
             "slug": article.slug,
             "excerpt": article.excerpt,
             "content": article.content,
-            "author": _user_payload(article.author),
+            "author": user_payload(article.author),
             "category": {
                 "id": article.category_id,
                 "name": article.category.name,
@@ -65,15 +65,19 @@ def broadcast_article_created(article: "Article") -> None:  # noqa: F821
             if article.category
             else None,
             "is_published": article.is_published,
-            "published_at": article.published_at.isoformat() if article.published_at else None,
-            "created_at": article.created_at.isoformat() if article.created_at else None,
+            "published_at": article.published_at.isoformat()
+            if article.published_at
+            else None,
+            "created_at": article.created_at.isoformat()
+            if article.created_at
+            else None,
         },
     )
 
 
 def broadcast_comment_created(comment: "Comment") -> None:  # noqa: F821
     """Broadcast a comment creation event."""
-    _broadcast(
+    broadcast(
         "comment_created",
         {
             "id": comment.id,
@@ -81,7 +85,9 @@ def broadcast_comment_created(comment: "Comment") -> None:  # noqa: F821
             "parent": comment.parent_id,
             "content": comment.content,
             "is_active": comment.is_active,
-            "user": _user_payload(comment.user),
-            "created_at": comment.created_at.isoformat() if comment.created_at else None,
+            "user": user_payload(comment.user),
+            "created_at": comment.created_at.isoformat()
+            if comment.created_at
+            else None,
         },
     )

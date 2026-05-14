@@ -20,7 +20,10 @@ class RolePermissionMixin:
         if not self.is_authenticated_user(request):
             return False
         user = request.user
-        return bool(getattr(user, "is_superuser", False) or getattr(user, "role", None) == "ADMIN")
+        return bool(
+            getattr(user, "is_superuser", False)
+            or getattr(user, "role", None) == "ADMIN"
+        )
 
     def is_editor_user(self, request: DRFRequest) -> bool:
         """Return True if the request user has EDITOR role."""
@@ -46,15 +49,16 @@ class RolePermissionMixin:
         """Raise PermissionDenied if has_permission returns False."""
         from rest_framework.exceptions import PermissionDenied
 
-        if not self.has_permission(request, None):  # type: ignore[attr-defined]
-            raise PermissionDenied(self.message)  # type: ignore[attr-defined]
+        if not self.has_permission(request, None):
+            
+            raise PermissionDenied(self.message)
 
     def check_object_permission_or_deny(self, request: DRFRequest, obj: Any) -> None:
         """Raise PermissionDenied if has_object_permission returns False."""
         from rest_framework.exceptions import PermissionDenied
 
-        if not self.has_object_permission(request, None, obj):  # type: ignore[attr-defined]
-            raise PermissionDenied(self.message)  # type: ignore[attr-defined]
+        if not self.has_object_permission(request, None, obj):
+            raise PermissionDenied(self.message)
 
 
 class IsEditorOrAdmin(RolePermissionMixin, BasePermission):
@@ -86,7 +90,9 @@ class IsAuthorOrEditorOrAdmin(RolePermissionMixin, BasePermission):
         """Return whether the request passes class-level permission checks."""
         return self.is_authenticated_user(request)
 
-    def has_object_permission(self, request: DRFRequest, view: ViewSet, obj: Any) -> bool:
+    def has_object_permission(
+        self, request: DRFRequest, view: ViewSet, obj: Any
+    ) -> bool:
         """Return whether the request is allowed for this target object."""
         if not self.is_authenticated_user(request):
             return False
@@ -105,7 +111,9 @@ class IsCommentAuthorOrAdmin(RolePermissionMixin, BasePermission):
         """Return whether the request passes class-level permission checks."""
         return self.is_authenticated_user(request)
 
-    def has_object_permission(self, request: DRFRequest, view: ViewSet, obj: Any) -> bool:
+    def has_object_permission(
+        self, request: DRFRequest, view: ViewSet, obj: Any
+    ) -> bool:
         """Return whether the request is allowed for this target object."""
         if not self.is_authenticated_user(request):
             return False
@@ -124,7 +132,9 @@ class IsOwnerOrAdmin(RolePermissionMixin, BasePermission):
         """Return whether the request passes class-level permission checks."""
         return self.is_authenticated_user(request)
 
-    def has_object_permission(self, request: DRFRequest, view: ViewSet, obj: Any) -> bool:
+    def has_object_permission(
+        self, request: DRFRequest, view: ViewSet, obj: Any
+    ) -> bool:
         """Return whether the request is allowed for this target object."""
         if not self.is_authenticated_user(request):
             return False

@@ -100,13 +100,12 @@ class ArticleDetailSerializer(ArticleListSerializer):
         )
 
     def get_comments(self, obj: Article) -> list[dict[str, Any]]:
-        """Return active top-level comments ordered by creation time."""
-        qs = obj.comments.filter(is_active=True, parent=None).order_by("created_at")
-        return CommentSerializer(qs, many=True).data
+        """Return prefetched top-level comments (uses Prefetch from the view)."""
+        return CommentSerializer(obj.comments.all(), many=True).data
 
     def get_reactions_count(self, obj: Article) -> int:
-        """Return total reaction count for the article."""
-        return obj.reactions.count()
+        """Return reaction count using prefetched data to avoid extra query."""
+        return len(obj.reactions.all())
 
 
 class ArticleCreateUpdateSerializer(ModelSerializer):
@@ -175,9 +174,10 @@ class CommentSerializer(ModelSerializer):
         return {"id": obj.user_id, "email": obj.user.email}
 
     def get_replies(self, obj: Comment) -> list[dict[str, Any]]:
-        """Return active nested replies."""
-        qs = obj.replies.filter(is_active=True).order_by("created_at")
-        return CommentSerializer(qs, many=True).data
+        """Return prefetched replies (max 1 level deep to prevent recursion)."""
+        if obj.parent_id is not None:
+            return []
+        return CommentSerializer(obj.replies.all(), many=True).data
 
 
 class CommentCreateSerializer(ModelSerializer):

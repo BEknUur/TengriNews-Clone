@@ -35,6 +35,7 @@ REST_FRAMEWORK = {
 }
 
 DISABLE_AUTH_THROTTLING = True
+DISABLE_RATE_LIMIT = True
 
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",

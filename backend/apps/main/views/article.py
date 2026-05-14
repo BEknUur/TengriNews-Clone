@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 
 # Django modules
-from django.db.models import F
+from django.db.models import F, Prefetch
 
 # Third-party modules
 from django_filters.rest_framework import DjangoFilterBackend
@@ -32,7 +32,7 @@ from apps.core.decorators import require_permissions
 from apps.core.mixins import DRFResponseMixin, ViewSetWorkflowMixin
 from apps.core.pagination_selector import get_paginator
 from apps.core.throttling import ActionThrottleMixin, throttle_scope
-from apps.main.models import Article, Bookmark
+from apps.main.models import Article, Bookmark, Comment
 from apps.main.permissions import IsAuthorOrEditorOrAdmin
 from apps.main.schema_serializers import ArticleListResponseSerializer
 from apps.main.serializers import (
@@ -99,7 +99,19 @@ class ArticleViewSet(ActionThrottleMixin, ViewSet, DRFResponseMixin, ViewSetWork
         """Return full article detail."""
         obj, error_response = self.get_object_or_404_response(
             Article.objects.select_related("author", "category").prefetch_related(
-                "tags", "comments", "reactions"
+                "tags",
+                Prefetch(
+                    "comments",
+                    queryset=Comment.objects.filter(is_active=True, parent=None)
+                    .select_related("user")
+                    .prefetch_related(
+                        Prefetch(
+                            "replies",
+                            queryset=Comment.objects.filter(is_active=True).select_related("user"),
+                        )
+                    ),
+                ),
+                "reactions",
             ),
             pk=pk,
         )

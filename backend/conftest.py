@@ -1,5 +1,4 @@
 # Python modules
-from dataclasses import dataclass
 from typing import Any
 
 # Third-party modules
@@ -10,14 +9,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 # Project modules
 from apps.accounts.models import CustomUser
 from apps.main.models import Article, Category, Tag
-
-
-@dataclass
-class AuthData:
-    """Holds authenticated user and its token."""
-
-    user: CustomUser
-    token: str
 
 
 @pytest.fixture

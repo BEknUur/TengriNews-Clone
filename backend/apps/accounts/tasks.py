@@ -45,7 +45,5 @@ def send_welcome_email_task(self: Any, user_id: int) -> str | Exception:
         )
         cache.set(done_key, "1", timeout=60 * 60 * 24)
         return f"Welcome email for user {user_id} has been sent."
-    except Exception as e:
-        raise e
     finally:
         cache.delete(lock_key)

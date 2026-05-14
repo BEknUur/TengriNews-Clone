@@ -9,6 +9,9 @@ import redis
 from redis.exceptions import RedisError
 from rest_framework.status import HTTP_429_TOO_MANY_REQUESTS
 
+# Django modules
+from django.conf import settings
+
 # Project modules
 from apps.core.middleware import get_client_ip
 from settings.conf import REDIS_DB, REDIS_HOST, REDIS_PORT
@@ -40,6 +43,9 @@ class RateLimitMiddleware:
         )
 
     def __call__(self, request: Any) -> Any:
+        if getattr(settings, "DISABLE_RATE_LIMIT", False):
+            return self.get_response(request)
+
         if not request.path.startswith(RATE_LIMIT_PATH_PREFIX):
             return self.get_response(request)
 

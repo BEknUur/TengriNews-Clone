@@ -9,3 +9,4 @@ media/
 db.sqlite3
 localdb.sqlite3.DS_Store
 backend/localdb.sqlite3
+celerybeat-schedule

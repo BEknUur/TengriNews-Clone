@@ -43,7 +43,7 @@ def cleanup_soft_deleted_records(
         count = qs.count()
         qs.delete()
         deleted_count[model_name] = count
-    logger.info(f"Soft-deleted records cleanup completed: {deleted_count}")
+    logger.info("Soft-deleted records cleanup completed: %s", deleted_count)
     return f"Soft-deleted records cleanup completed: {deleted_count}"
 
 
@@ -60,10 +60,10 @@ def collect_content_statistics(self: Any) -> dict[str, int]:
         "users_total": CustomUser.objects.filter(deleted_at__isnull=True).count(),
         "total_articles": Article.objects.filter(deleted_at__isnull=True).count(),
         "articles_published": Article.objects.filter(
-            deleted_at__isnull=True, published_at=True
+            deleted_at__isnull=True, is_published=True
         ).count(),
         "comments_total": Comment.objects.filter(deleted_at__isnull=True).count(),
         "reactions_total": Reaction.objects.filter(deleted_at__isnull=True).count(),
     }
-    logger.info(f"Content statistics collected: {stats}")
+    logger.info("Content statistics collected: %s", stats)
     return stats
