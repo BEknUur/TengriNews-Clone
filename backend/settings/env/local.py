@@ -6,6 +6,9 @@ DEBUG: bool = True
 
 ALLOWED_HOSTS: list = ["*"]
 
+CORS_ALLOW_ALL_ORIGINS: bool = True
+CORS_ALLOW_CREDENTIALS: bool = True
+
 # Database configuration
 DATABASES: dict = {
     "default": {

@@ -20,7 +20,7 @@ from rest_framework.viewsets import ViewSet
 # Project modules
 from apps.abstracts.mixins import DRFResponseMixin
 from apps.abstracts.pagination_selector import get_paginator
-from apps.main.models import Article, Category, Comment, Reaction, Tag
+from apps.main.models import Article, Bookmark, Category, Comment, Reaction, Tag
 from apps.main.permissions import (
     IsAdminOnly,
     IsAuthorOrEditorOrAdmin,
@@ -30,6 +30,7 @@ from apps.main.serializers import (
     ArticleCreateUpdateSerializer,
     ArticleDetailSerializer,
     ArticleListSerializer,
+    BookmarkSerializer,
     CategorySerializer,
     CommentCreateSerializer,
     CommentSerializer,
@@ -432,6 +433,65 @@ class ArticleViewSet(ViewSet, DRFResponseMixin):
             return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return DRFResponse({"detail": "ok"}, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Add or remove article bookmark",
+        responses={
+            200: BookmarkSerializer,
+            201: BookmarkSerializer,
+            401: OpenApiResponse(description="Unauthorized"),
+            404: OpenApiResponse(description="Article not found"),
+        },
+    )
+    @action(
+        detail=True,
+        methods=["post", "delete"],
+        url_path="bookmark",
+        permission_classes=[IsAuthenticated],
+    )
+    def bookmark(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
+        """Add or remove current user's bookmark for an article."""
+        try:
+            article = Article.objects.get(pk=pk)
+        except Article.DoesNotExist:
+            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.method == "DELETE":
+            bookmark = Bookmark.objects.filter(
+                user=request.user,
+                article=article,
+                deleted_at__isnull=True,
+            ).first()
+            if bookmark:
+                bookmark.delete()
+
+            return DRFResponse({"detail": "Bookmark removed."}, status=status.HTTP_200_OK)
+
+        bookmark = Bookmark.objects.filter(
+            user=request.user,
+            article=article,
+        ).first()
+
+        if bookmark and bookmark.deleted_at is not None:
+            bookmark.deleted_at = None
+            bookmark.save(update_fields=["deleted_at", "updated_at"])
+            return DRFResponse(
+                BookmarkSerializer(bookmark).data,
+                status=status.HTTP_201_CREATED,
+            )
+
+        if bookmark:
+            return DRFResponse(
+                BookmarkSerializer(bookmark).data,
+                status=status.HTTP_200_OK,
+            )
+
+        bookmark = Bookmark.objects.create(user=request.user, article=article)
+        return DRFResponse(
+            BookmarkSerializer(bookmark).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
 
 class CommentViewSet(ViewSet):
     """CRUD operations for comments."""
@@ -607,3 +667,28 @@ class ReactionViewSet(ViewSet):
             return DRFResponse({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         obj.delete()
         return DRFResponse(status=status.HTTP_204_NO_CONTENT)
+
+
+class BookmarkViewSet(ViewSet):
+    """Read current user's saved articles."""
+
+    @extend_schema(
+        summary="List my bookmarks",
+        responses={
+            200: BookmarkSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized"),
+        },
+    )
+    def list(self, request: DRFRequest) -> DRFResponse:
+        """Return bookmarks for the authenticated user."""
+        IsAuthenticated().check_permission_or_deny(request)
+        qs = (
+            Bookmark.objects.filter(user=request.user, deleted_at__isnull=True)
+            .select_related("article", "article__author", "article__category")
+            .prefetch_related("article__tags")
+            .order_by("-created_at")
+        )
+        return DRFResponse(
+            BookmarkSerializer(qs, many=True).data,
+            status=status.HTTP_200_OK,
+        )

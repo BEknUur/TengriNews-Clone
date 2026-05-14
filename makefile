@@ -4,7 +4,8 @@ migrations migrate showmigrations seed \
 test test-v \
 lint lint-fix \
 up down logs build clean all \
-worker beat
+worker beat \
+fe-install fe-dev fe-build
 
 # config
 PYTHON = backend/.venv/bin/python
@@ -72,6 +73,16 @@ lint:
 
 lint-fix:
 	cd backend && $(PYTHON) -m ruff check --fix apps/ settings/
+
+# frontend
+frontend-install:
+	cd frontend && npm install
+
+frontend-dev:
+	cd frontend && npm run dev
+
+frontend-build:
+	cd frontend && npm run build
 
 # celery
 worker:

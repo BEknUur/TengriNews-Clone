@@ -16,6 +16,7 @@ from django.db.models import (
     TextField,
     TextChoices,
     UniqueConstraint,
+    JSONField,
     Q,
     CASCADE,
     SET_NULL,
@@ -31,7 +32,7 @@ TAG_NAME_MAX_LENGTH: int = 255
 TAG_SLUG_MAX_LENGTH: int = 255
 ARTICLE_TITLE_MAX_LENGTH: int = 255
 ARTICLE_SLUG_MAX_LENGTH: int = 255
-REACTION_TYPE_MAX_LENGTH: int = 20
+REACTION_TYPE_MAX_LENGTH: int = 10
 
 
 class Category(AbstractTimeStamptModel):
@@ -245,3 +246,37 @@ class Bookmark(AbstractTimeStamptModel):
 
     def __repr__(self) -> str:
         return f"Bookmark(id={self.pk}, user={self.user_id}, article={self.article_id})"
+
+
+class ArticleAuditLog(AbstractTimeStamptModel):
+    """Audit record for article create/update events."""
+
+    class Action(TextChoices):
+        CREATED = "created", "Created"
+        UPDATED = "updated", "Updated"
+
+    article = ForeignKey(
+        Article,
+        on_delete=CASCADE,
+        related_name="audit_logs",
+    )
+    actor = ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=SET_NULL,
+        related_name="article_audit_logs",
+    )
+
+    action = CharField(max_length=20, choices=Action.choices)
+    snapshot = JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            Index(fields=["article", "-created_at"]),
+            Index(fields=["actor", "-created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"ArticleAuditLog article={self.article_id} action={self.action}"
