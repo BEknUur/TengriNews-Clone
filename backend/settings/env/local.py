@@ -35,6 +35,8 @@ REST_FRAMEWORK = {
 }
 
 DISABLE_AUTH_THROTTLING = True
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DISABLE_RATE_LIMIT = True
 
 PASSWORD_HASHERS = [
