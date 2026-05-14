@@ -136,6 +136,31 @@ LOGGING = {
     },
 }
 
+""" Redis cache configuration """
+REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
+REDIS_PORT = os.environ.get("REDIS_PORT", "6379")
+REDIS_DB = os.environ.get("REDIS_DB", "0")
+REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # optional: compression/timeouts
+            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+        },
+        "KEY_PREFIX": "tengri",
+    },
+    "article_cache": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        "KEY_PREFIX": "tengri:article",
+    },
+}
+
 """
 Simple JWT
 """
@@ -311,3 +336,7 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Cache TTLs (seconds)
+ARTICLE_DETAIL_TTL = int(os.environ.get("ARTICLE_DETAIL_TTL", 300))
+ARTICLE_LIST_TTL = int(os.environ.get("ARTICLE_LIST_TTL", 60))

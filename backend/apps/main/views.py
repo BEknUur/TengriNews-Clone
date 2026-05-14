@@ -48,6 +48,9 @@ from apps.main.serializers import (
     ReactionSerializer,
     TagSerializer,
 )
+from django.conf import settings
+from apps.main.utils.cache import make_article_detail_key, cache_get, cache_set
+from apps.main.utils.cache import make_article_list_key, get_list_version
 
 
 class CategoryViewSet(ViewSet, ViewSetWorkflowMixin):
@@ -312,15 +315,43 @@ class ArticleViewSet(ViewSet, DRFResponseMixin, ViewSetWorkflowMixin):
     )
     def list(self, request: DRFRequest) -> DRFResponse:
         """Return a paginated list of articles."""
+        # try list cache first
+        params: dict = {}
+        for k in sorted(request.GET.keys()):
+            vals = request.GET.getlist(k)
+            params[k] = ",".join(vals)
+
+        try:
+            list_key = make_article_list_key(params)
+            cached = None
+            try:
+                cached = cache_get(list_key)
+            except Exception:
+                cached = None
+            if cached is not None:
+                return DRFResponse(data=cached, status=HTTP_200_OK)
+        except Exception:
+            list_key = None
+
         qs = (
             Article.objects.select_related("author", "category")
             .prefetch_related("tags")
             .order_by("-published_at", "-id")
         )
         paginator = get_paginator(request, self)
-        return self.get_drf_response(
+        response = self.get_drf_response(
             request, qs, ArticleListSerializer, many=True, paginator=paginator
         )
+
+        # cache paginated response data
+        if list_key is not None and response.status_code == HTTP_200_OK:
+            try:
+                ttl = getattr(settings, "ARTICLE_LIST_TTL", 60)
+                cache_set(list_key, response.data, ttl)
+            except Exception:
+                pass
+
+        return response
 
     @extend_schema(
         summary="Retrieve an article",
@@ -332,6 +363,21 @@ class ArticleViewSet(ViewSet, DRFResponseMixin, ViewSetWorkflowMixin):
     )
     def retrieve(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
         """Return full article detail."""
+        # try cache first
+        try:
+            key = make_article_detail_key(int(pk)) if pk is not None else None
+        except Exception:
+            key = None
+
+        if key:
+            try:
+                cached = cache_get(key)
+                if cached is not None:
+                    return DRFResponse(data=cached, status=HTTP_200_OK)
+            except Exception:
+                # don't fail the whole request on cache errors
+                pass
+
         obj, error_response = self.get_object_or_404_response(
             Article.objects.select_related("author", "category").prefetch_related(
                 "tags", "comments", "reactions"
@@ -341,12 +387,17 @@ class ArticleViewSet(ViewSet, DRFResponseMixin, ViewSetWorkflowMixin):
         if error_response:
             return error_response
 
-        return self.serialize_to_response(
-            serializer_class=ArticleDetailSerializer,
-            instance=obj,
-            status_code=HTTP_200_OK,
-            context={"request": request},
-        )
+        # serialize and store in cache
+        serializer = ArticleDetailSerializer(obj, context={"request": request})
+        data = serializer.data
+        ttl = getattr(settings, "ARTICLE_DETAIL_TTL", 300)
+        if key:
+            try:
+                cache_set(key, data, ttl)
+            except Exception:
+                pass
+
+        return DRFResponse(data=data, status=HTTP_200_OK)
 
     @extend_schema(
         summary="Create an article",
@@ -792,7 +843,7 @@ class ReactionViewSet(ViewSet, ViewSetWorkflowMixin):
         try:
             obj = Reaction.objects.get(pk=pk)
         except Reaction.DoesNotExist:
-            return DRFResponse({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return DRFResponse({"detail": "Not found."}, status=HTTP_404_NOT_FOUND)
         if obj.user_id != request.user.pk:
             return DRFResponse(
                 {"detail": "Forbidden."}, status=HTTP_403_FORBIDDEN

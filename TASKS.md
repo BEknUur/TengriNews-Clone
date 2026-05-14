@@ -99,6 +99,17 @@
 ### Фаза 1
 - [ ] Redis caching — cache backend + кеширование статей с TTL + инвалидация при update/delete
   - Файлы: `settings/base.py`, `apps/main/views.py`
+
+### Redis caching — notes
+
+- **Keys:**
+  - Detail: `article:detail:<id>`
+  - List: `article:list:v<version>:<short-hash>` (includes atomic list version)
+- **TTLs:**
+  - `ARTICLE_DETAIL_TTL` (env, default 300s)
+  - `ARTICLE_LIST_TTL` (env, default 60s)
+- **Invalidation:** `post_save`/`post_delete` on `Article` deletes detail key and `INCR` list version.
+- **Files:** `apps/main/utils/cache.py`, `apps/main/signals.py`, `apps/main/views.py`, `settings/base.py`
 - [ ] Async endpoint — aiohttp fetch внешнего API + обработка + кеш
   - Файлы: `apps/main/views.py`
 

@@ -30,6 +30,7 @@ dependencies = [
     "channels>=4.2.0",
     "channels-redis>=4.2.1",
     "python-json-logger>=2.0.2,<3.0",
+    "django-redis>=5.2.0,<6.0",
 ]
 [tool.setuptools]
 packages = ["apps", "settings"]
@@ -40,5 +41,5 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 filterwarnings = [
-    "ignore:No directory at:.*backend/static/:UserWarning:django.core.handlers.base",
+    "ignore:No directory at .*backend/static/:UserWarning",
 ]
