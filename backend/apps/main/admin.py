@@ -1,6 +1,7 @@
+# Django modules
 from django.contrib import admin
 
-# Register your models here.
+# Project modules
 from .models import Article, ArticleAuditLog, Bookmark, Category, Comment, Reaction, Tag
 
 admin.site.register(Category)

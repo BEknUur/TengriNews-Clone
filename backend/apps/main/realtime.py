@@ -1,10 +1,10 @@
-"""Helpers for broadcasting news events over Channels."""
-
 from __future__ import annotations
 
+# Python modules
 import logging
 from typing import TYPE_CHECKING, Any
 
+# Third-party modules
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
@@ -17,6 +17,7 @@ NEWS_GROUP_NAME = "news_notifications"
 
 
 def _broadcast(event_type: str, payload: dict[str, Any]) -> None:
+    """Run the internal helper that handles broadcast."""
     channel_layer = get_channel_layer()
     if channel_layer is None:
         return
@@ -34,6 +35,7 @@ def _broadcast(event_type: str, payload: dict[str, Any]) -> None:
 
 
 def _user_payload(user: Any) -> dict[str, Any] | None:
+    """Run the internal helper that handles user payload."""
     if user is None:
         return None
     return {

@@ -1,7 +1,7 @@
-"""WebSocket routes for the main app."""
-
+# Django modules
 from django.urls import path
 
+# Project modules
 from apps.main.consumers import NewsConsumer
 
 websocket_urlpatterns = [

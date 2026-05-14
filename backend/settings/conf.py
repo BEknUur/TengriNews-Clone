@@ -1,3 +1,4 @@
+# Third-party modules
 from decouple import config
 
 DEFAULT_PAGE_SIZE: int = 20

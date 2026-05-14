@@ -1,5 +1,6 @@
 # Python modules
 import re
+from typing import Any
 
 # Third-party modules
 from celery import shared_task
@@ -16,7 +17,8 @@ from apps.main.models import Article
     retry_jitter=True,
     max_retries=5,
 )
-def process_article_content_task(self, article_id: int) -> dict[str, int] | Exception:
+def process_article_content_task(self: Any, article_id: int) -> dict[str, int] | Exception:
+    """Execute process article content task logic and return its result."""
     article: Article = Article.objects.filter(
         id=article_id, deleted_at__isnull=True
     ).first()

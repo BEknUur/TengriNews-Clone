@@ -1,6 +1,12 @@
+# Django modules
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+
+# Third-party modules
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
+
+# Project modules
 from apps.main.views import (
     ArticleViewSet,
     BookmarkViewSet,
@@ -9,7 +15,6 @@ from apps.main.views import (
     ReactionViewSet,
     TagViewSet,
 )
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 router = DefaultRouter()
 router.register(r"categories", CategoryViewSet, basename="categories")
@@ -22,7 +27,7 @@ router.register(r"bookmarks", BookmarkViewSet, basename="bookmarks")
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(router.urls)),
-    path("api/accounts/", include("apps.accounts.auth.urls")),
+    path("api/accounts/", include("apps.accounts.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/",

@@ -1,9 +1,9 @@
-"""Serializers for categories, tags, articles, comments, and reactions."""
-
 from __future__ import annotations
 
+# Python modules
 from typing import Any
 
+# Third-party modules
 from rest_framework.serializers import (
     CharField,
     ModelSerializer,
@@ -12,6 +12,7 @@ from rest_framework.serializers import (
     ValidationError,
 )
 
+# Project modules
 from apps.main.models import Article, Bookmark, Category, Comment, Reaction, Tag
 
 
@@ -19,6 +20,7 @@ class CategorySerializer(ModelSerializer):
     """Serialize a Category with optional parent nesting."""
 
     class Meta:
+        """Meta class."""
         model = Category
         fields: tuple[str, ...] = (
             "id",
@@ -34,6 +36,7 @@ class TagSerializer(ModelSerializer):
     """Serialize a Tag."""
 
     class Meta:
+        """Meta class."""
         model = Tag
         fields: tuple[str, ...] = (
             "id", 
@@ -52,6 +55,7 @@ class ArticleListSerializer(ModelSerializer):
     author = SerializerMethodField()
 
     class Meta:
+        """Meta class."""
         model = Article
         fields: tuple[str, ...] = (
             "id",
@@ -88,6 +92,7 @@ class ArticleDetailSerializer(ArticleListSerializer):
     reactions_count = SerializerMethodField()
 
     class Meta(ArticleListSerializer.Meta):
+        """Meta class."""
         fields = ArticleListSerializer.Meta.fields + (
             "content",
             "comments",
@@ -110,6 +115,7 @@ class ArticleCreateUpdateSerializer(ModelSerializer):
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True, required=False)
 
     class Meta:
+        """Meta class."""
         model = Article
         fields: tuple[str, ...] = (
             "title",
@@ -149,6 +155,7 @@ class CommentSerializer(ModelSerializer):
     replies = SerializerMethodField()
 
     class Meta:
+        """Meta class."""
         model = Comment
         fields: tuple[str, ...] = (
             "id",
@@ -177,6 +184,7 @@ class CommentCreateSerializer(ModelSerializer):
     """Serializer for creating a new comment or reply."""
 
     class Meta:
+        """Meta class."""
         model = Comment
         fields: tuple[str, ...] = ("article", "parent", "content")
 
@@ -199,6 +207,7 @@ class ReactionSerializer(ModelSerializer):
     """Serializer for creating and reading reactions."""
 
     class Meta:
+        """Meta class."""
         model = Reaction
         fields: tuple[str, ...] = (
             "id",
@@ -235,6 +244,7 @@ class BookmarkSerializer(ModelSerializer):
     article = ArticleListSerializer(read_only=True)
 
     class Meta:
+        """Meta class."""
         model = Bookmark
         fields: tuple[str, ...] = (
             "id",

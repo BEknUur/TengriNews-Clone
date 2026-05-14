@@ -42,7 +42,7 @@ DJANGO_AND_THIRD_PARTY_APPS = [
 ]
 
 PROJECT_APPS = [
-    "apps.abstracts.apps.AbstractConfig",
+    "apps.core.apps.CoreConfig",
     "apps.main.apps.MainConfig",
     "apps.accounts.apps.AccountsConfig",
 ]
@@ -164,8 +164,8 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_THROTTLE_CLASSES": [
-        "apps.abstracts.trottling.CustomAnonRateThrottle",
-        "apps.abstracts.trottling.CustomUserRateThrottle",
+        "apps.core.throttling.CustomAnonRateThrottle",
+        "apps.core.throttling.CustomUserRateThrottle",
         "rest_framework.throttling.ScopedRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
@@ -199,13 +199,13 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
-    "apps.abstracts.ratelimit.RateLimitMiddleware",
-    "apps.abstracts.middleware.StructuredRequestLoggingMiddleware",
+    "apps.core.ratelimit.RateLimitMiddleware",
+    "apps.core.middleware.StructuredRequestLoggingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "apps.abstracts.middleware.CurrentUserMiddleware",
+    "apps.core.middleware.CurrentUserMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -292,11 +292,11 @@ CHANNEL_LAYERS = {
 
 CELERY_BEAT_SCHEDULE = {
     "cleanup_soft_deleted_records": {
-        "task": "apps.abstracts.tasks.cleanup_soft_deleted_records",
+        "task": "apps.core.tasks.cleanup_soft_deleted_records",
         "schedule": crontab(hour=3, minute=0),
     },
     "collect_content_statistics": {
-        "task": "apps.abstracts.tasks.collect_content_statistics",
+        "task": "apps.core.tasks.collect_content_statistics",
         "schedule": crontab(hour=3, minute=0),
     },
 }

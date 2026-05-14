@@ -1,13 +1,14 @@
-"""Signal handlers for article and comment creation events."""
-
 from __future__ import annotations
 
+# Python modules
 from typing import Any
 
+# Django modules
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from apps.abstracts.middleware import get_current_user
+# Project modules
+from apps.core.middleware import get_current_user
 from apps.main.models import Article, ArticleAuditLog, Comment
 from apps.main.realtime import broadcast_article_created, broadcast_comment_created
 
@@ -19,6 +20,7 @@ def notify_article_created(
     created: bool,
     **kwargs: dict[str, Any],
 ) -> None:
+    """Execute notify article created logic and return its result."""
     if created:
         broadcast_article_created(instance)
 
@@ -30,6 +32,7 @@ def notify_comment_created(
     created: bool,
     **kwargs: dict[str, Any],
 ) -> None:
+    """Execute notify comment created logic and return its result."""
     if created:
         broadcast_comment_created(instance)
 

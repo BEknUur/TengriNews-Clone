@@ -1,11 +1,15 @@
+# Python modules
 import json
 import logging
+from typing import Any
 
+# Third-party modules
 import pytest
 
 
 @pytest.mark.django_db
-def test_structured_logging_middleware_logs_request(auth_client, caplog):
+def test_structured_logging_middleware_logs_request(auth_client: Any, caplog: Any) -> None:
+    """Test `test_structured_logging_middleware_logs_request`."""
     logger = logging.getLogger("apps.requests")
     logger.addHandler(caplog.handler)
 

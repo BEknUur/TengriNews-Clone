@@ -1,20 +1,30 @@
+# Python modules
+from typing import Any
+
+# Third-party modules
 import pytest
 
+# Project modules
 from apps.accounts.models import CustomUser
 from apps.main.models import Article, Category, Comment
 
 
 class DummyChannelLayer:
+    """DummyChannelLayer class."""
     def __init__(self) -> None:
+        """Initialize instance."""
         self.messages: list[tuple[str, dict]] = []
 
     async def group_send(self, group: str, message: dict) -> None:
+        """Capture outgoing channel-layer messages for assertion in tests."""
         self.messages.append((group, message))
 
 
 @pytest.mark.django_db
 class TestRealtimeNotifications:
-    def test_article_create_broadcasts_event(self, monkeypatch, user: CustomUser) -> None:
+    """TestRealtimeNotifications class."""
+    def test_article_create_broadcasts_event(self, monkeypatch: Any, user: CustomUser) -> None:
+        """Test `test_article_create_broadcasts_event`."""
         from apps.main import realtime
 
         channel_layer = DummyChannelLayer()
@@ -39,10 +49,11 @@ class TestRealtimeNotifications:
 
     def test_comment_create_broadcasts_event(
         self,
-        monkeypatch,
+        monkeypatch: Any,
         user: CustomUser,
         article: Article,
     ) -> None:
+        """Test `test_comment_create_broadcasts_event`."""
         from apps.main import realtime
 
         channel_layer = DummyChannelLayer()

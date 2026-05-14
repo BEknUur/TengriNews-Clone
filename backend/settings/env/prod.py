@@ -5,7 +5,7 @@ import dj_database_url
 
 # Project modules
 from settings.base import *  # noqa: F403
-from settings.conf import POSTGRESQL_URL, REDIS_HOST, REDIS_PORT, REDIS_DB
+from settings.conf import POSTGRESQL_URL, REDIS_DB, REDIS_HOST, REDIS_PORT
 
 DEBUG: bool = False
 

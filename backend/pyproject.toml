@@ -38,6 +38,12 @@ pythonpath = ["."]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+addopts = "-n auto --reuse-db"
 filterwarnings = [
-    "ignore:No directory at:.*backend/static/:UserWarning:django.core.handlers.base",
+    "ignore::UserWarning:django.core.handlers.base",
+]
+
+[dependency-groups]
+dev = [
+    "pytest-xdist>=3.8.0",
 ]

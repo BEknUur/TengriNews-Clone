@@ -1,29 +1,32 @@
-"""Models for the main news domain: Category, Tag, Article, Comment, Reaction."""
-
 from __future__ import annotations
 
+# Python modules
+from typing import Any
+
+# Django modules
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import (
     BooleanField,
+    CASCADE,
     CharField,
     DateTimeField,
     ForeignKey,
     Index,
+    JSONField,
     ManyToManyField,
     PositiveIntegerField,
-    SlugField,
-    TextField,
-    TextChoices,
-    UniqueConstraint,
-    JSONField,
     Q,
-    CASCADE,
     SET_NULL,
+    SlugField,
+    TextChoices,
+    TextField,
+    UniqueConstraint,
 )
 from django.utils import timezone
 
-from apps.abstracts.models import AbstractTimeStamptModel
+# Project modules
+from apps.core.models import AbstractTimeStamptModel
 
 # Constants
 CATEGORY_NAME_MAX_LENGTH: int = 255
@@ -49,14 +52,17 @@ class Category(AbstractTimeStamptModel):
     )
 
     class Meta:
+        """Meta class."""
         verbose_name = "category"
         verbose_name_plural = "categories"
         ordering = ["name"]
 
     def __str__(self) -> str:
+        """Return a human-readable string representation of this object."""
         return self.name
 
     def __repr__(self) -> str:
+        """Return a developer-friendly representation of this object."""
         return f"Category(id={self.pk}, name={self.name!r})"
 
 
@@ -67,12 +73,15 @@ class Tag(AbstractTimeStamptModel):
     slug = SlugField(max_length=TAG_SLUG_MAX_LENGTH, unique=True)
 
     class Meta:
+        """Meta class."""
         ordering = ["name"]
 
     def __str__(self) -> str:
+        """Return a human-readable string representation of this object."""
         return self.name
 
     def __repr__(self) -> str:
+        """Return a developer-friendly representation of this object."""
         return f"Tag(id={self.pk}, name={self.name!r})"
 
 
@@ -100,21 +109,24 @@ class Article(AbstractTimeStamptModel):
     view_count = PositiveIntegerField(default=0)
 
     class Meta:
+        """Meta class."""
         ordering = ["-published_at", "-id"]
         indexes = [
             Index(fields=["published_at", "id"]),
         ]
 
-    def save(self, *args, **kwargs) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Auto-set published_at when article is first published."""
         if self.is_published and self.published_at is None:
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
+        """Return a human-readable string representation of this object."""
         return self.title
 
     def __repr__(self) -> str:
+        """Return a developer-friendly representation of this object."""
         return f"Article(id={self.pk}, title={self.title!r})"
 
 
@@ -144,6 +156,7 @@ class Comment(AbstractTimeStamptModel):
     is_active = BooleanField(default=True)
 
     class Meta:
+        """Meta class."""
         ordering = ["created_at"]
 
     def clean(self) -> None:
@@ -152,9 +165,11 @@ class Comment(AbstractTimeStamptModel):
             raise ValidationError("Parent comment must belong to the same article.")
 
     def __str__(self) -> str:
+        """Return a human-readable string representation of this object."""
         return f"Comment #{self.pk} by {self.user}"
 
     def __repr__(self) -> str:
+        """Return a developer-friendly representation of this object."""
         return f"Comment(id={self.pk}, user={self.user})"
 
 
@@ -162,6 +177,7 @@ class Reaction(AbstractTimeStamptModel):
     """A user reaction (like, dislike, etc.) on an article or comment."""
 
     class ReactionType(TextChoices):
+        """ReactionType class."""
         LIKE = "like", "Like"
         DISLIKE = "dislike", "Dislike"
         LOVE = "love", "Love"
@@ -189,6 +205,7 @@ class Reaction(AbstractTimeStamptModel):
     type = CharField(max_length=REACTION_TYPE_MAX_LENGTH, choices=ReactionType.choices)
 
     class Meta:
+        """Meta class."""
         constraints = [
             UniqueConstraint(
                 fields=["user", "article"],
@@ -210,10 +227,12 @@ class Reaction(AbstractTimeStamptModel):
             )
 
     def __str__(self) -> str:
+        """Return a human-readable string representation of this object."""
         target = self.article or self.comment
         return f"Reaction {self.type} by {self.user} on {target}"
 
     def __repr__(self) -> str:
+        """Return a developer-friendly representation of this object."""
         return f"Reaction(id={self.pk}, type={self.type!r}, user={self.user})"
 
 
@@ -232,6 +251,7 @@ class Bookmark(AbstractTimeStamptModel):
     )
 
     class Meta:
+        """Meta class."""
         ordering = ["-created_at"]
         constraints = [
             UniqueConstraint(
@@ -242,9 +262,11 @@ class Bookmark(AbstractTimeStamptModel):
         ]
 
     def __str__(self) -> str:
+        """Return a human-readable string representation of this object."""
         return f"Bookmark user={self.user_id} article={self.article_id}"
 
     def __repr__(self) -> str:
+        """Return a developer-friendly representation of this object."""
         return f"Bookmark(id={self.pk}, user={self.user_id}, article={self.article_id})"
 
 
@@ -252,6 +274,7 @@ class ArticleAuditLog(AbstractTimeStamptModel):
     """Audit record for article create/update events."""
 
     class Action(TextChoices):
+        """Action class."""
         CREATED = "created", "Created"
         UPDATED = "updated", "Updated"
 
@@ -272,6 +295,7 @@ class ArticleAuditLog(AbstractTimeStamptModel):
     snapshot = JSONField(default=dict, blank=True)
 
     class Meta:
+        """Meta class."""
         ordering = ["-created_at"]
         indexes = [
             Index(fields=["article", "-created_at"]),
@@ -279,4 +303,5 @@ class ArticleAuditLog(AbstractTimeStamptModel):
         ]
 
     def __str__(self) -> str:
+        """Return a human-readable string representation of this object."""
         return f"ArticleAuditLog article={self.article_id} action={self.action}"

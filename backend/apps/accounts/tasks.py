@@ -1,7 +1,10 @@
+# Python modules
+from typing import Any
+
 # Django modules
+from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.conf import settings
 
 # Third-party modules
 from celery import shared_task
@@ -18,7 +21,8 @@ from apps.accounts.models import CustomUser
     retry_jitter=True,
     max_retries=5,
 )
-def send_welcome_email_task(self, user_id: int) -> str | Exception:
+def send_welcome_email_task(self: Any, user_id: int) -> str | Exception:
+    """Execute send welcome email task logic and return its result."""
     user: CustomUser = CustomUser.objects.filter(
         id=user_id, deleted_at__isnull=True
     ).first()

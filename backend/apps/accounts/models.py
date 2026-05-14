@@ -1,7 +1,6 @@
-"""Custom user model with email-based authentication and role support."""
-
 from __future__ import annotations
 
+# Django modules
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db.models import (
     BooleanField,
@@ -12,7 +11,8 @@ from django.db.models import (
     TextChoices,
 )
 
-from apps.abstracts.models import AbstractTimeStamptModel
+# Project modules
+from apps.core.models import AbstractTimeStamptModel
 from apps.accounts.manager import CustomUserManager
 
 # Constants
@@ -34,6 +34,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin, AbstractTimeStamptModel):
     """
 
     class Role(TextChoices):
+        """Role class."""
         ADMIN = "ADMIN", "Admin"
         EDITOR = "EDITOR", "Editor"
         USER = "USER", "User"
@@ -61,11 +62,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin, AbstractTimeStamptModel):
     objects = CustomUserManager()
 
     class Meta:
+        """Meta class."""
         verbose_name = "User"
         verbose_name_plural = "Users"
 
     def __str__(self) -> str:
+        """Return a human-readable string representation of this object."""
         return self.email
 
     def __repr__(self) -> str:
+        """Return a developer-friendly representation of this object."""
         return f"CustomUser(id={self.pk}, email={self.email!r})"

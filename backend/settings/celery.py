@@ -1,5 +1,7 @@
 # Python modules
 import os
+
+# Third-party modules
 from celery import Celery
 
 # Project modules

@@ -1,7 +1,10 @@
+# Python modules
 from types import SimpleNamespace
 
+# Django modules
 from django.test import TestCase
 
+# Project modules
 from apps.main.permissions import (
     IsAdminOnly,
     IsAuthorOrEditorOrAdmin,
@@ -12,6 +15,7 @@ from apps.main.permissions import (
 
 
 class PermissionClassesTestCase(TestCase):
+    """PermissionClassesTestCase class."""
     def make_user(
         self,
         user_id: int,
@@ -19,6 +23,7 @@ class PermissionClassesTestCase(TestCase):
         is_superuser: bool = False,
         is_authenticated: bool = True,
     ) -> SimpleNamespace:
+        """Create and return a user instance for test scenarios."""
         return SimpleNamespace(
             id=user_id,
             role=role,
@@ -27,21 +32,25 @@ class PermissionClassesTestCase(TestCase):
         )
 
     def make_request(self, user: SimpleNamespace) -> SimpleNamespace:
+        """Create and return a request object configured for tests."""
         return SimpleNamespace(user=user)
 
     def test_is_editor_or_admin_allows_editor(self) -> None:
+        """Test `test_is_editor_or_admin_allows_editor`."""
         permission = IsEditorOrAdmin()
         request = self.make_request(self.make_user(user_id=1, role="EDITOR"))
 
         self.assertTrue(permission.has_permission(request=request, view=None))
 
     def test_is_editor_or_admin_denies_regular_user(self) -> None:
+        """Test `test_is_editor_or_admin_denies_regular_user`."""
         permission = IsEditorOrAdmin()
         request = self.make_request(self.make_user(user_id=1, role="USER"))
 
         self.assertFalse(permission.has_permission(request=request, view=None))
 
     def test_is_admin_only_allows_superuser_without_role(self) -> None:
+        """Test `test_is_admin_only_allows_superuser_without_role`."""
         permission = IsAdminOnly()
         request = self.make_request(
             self.make_user(user_id=1, role=None, is_superuser=True)
@@ -50,6 +59,7 @@ class PermissionClassesTestCase(TestCase):
         self.assertTrue(permission.has_permission(request=request, view=None))
 
     def test_is_author_or_editor_or_admin_allows_author(self) -> None:
+        """Test `test_is_author_or_editor_or_admin_allows_author`."""
         permission = IsAuthorOrEditorOrAdmin()
         request = self.make_request(self.make_user(user_id=10, role="USER"))
         article = SimpleNamespace(author_id=10)
@@ -59,6 +69,7 @@ class PermissionClassesTestCase(TestCase):
         )
 
     def test_is_author_or_editor_or_admin_denies_not_author_user(self) -> None:
+        """Test `test_is_author_or_editor_or_admin_denies_not_author_user`."""
         permission = IsAuthorOrEditorOrAdmin()
         request = self.make_request(self.make_user(user_id=10, role="USER"))
         article = SimpleNamespace(author_id=11)
@@ -68,6 +79,7 @@ class PermissionClassesTestCase(TestCase):
         )
 
     def test_is_comment_author_or_admin_allows_comment_author(self) -> None:
+        """Test `test_is_comment_author_or_admin_allows_comment_author`."""
         permission = IsCommentAuthorOrAdmin()
         request = self.make_request(self.make_user(user_id=21, role="USER"))
         comment = SimpleNamespace(user_id=21)
@@ -77,6 +89,7 @@ class PermissionClassesTestCase(TestCase):
         )
 
     def test_is_owner_or_admin_allows_profile_owner(self) -> None:
+        """Test `test_is_owner_or_admin_allows_profile_owner`."""
         permission = IsOwnerOrAdmin()
         request = self.make_request(self.make_user(user_id=7, role="USER"))
         profile_owner = SimpleNamespace(id=7)
@@ -90,6 +103,7 @@ class PermissionClassesTestCase(TestCase):
         )
 
     def test_is_owner_or_admin_denies_non_owner_user(self) -> None:
+        """Test `test_is_owner_or_admin_denies_non_owner_user`."""
         permission = IsOwnerOrAdmin()
         request = self.make_request(self.make_user(user_id=7, role="USER"))
         profile_owner = SimpleNamespace(id=9)
