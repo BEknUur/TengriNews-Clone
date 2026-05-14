@@ -7,4 +7,4 @@ logs/
 static/
 media/
 db.sqlite3
-localdb.sqlite3
+localdb.sqlite3.DS_Store
