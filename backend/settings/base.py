@@ -42,7 +42,7 @@ DJANGO_AND_THIRD_PARTY_APPS = [
 ]
 
 PROJECT_APPS = [
-    "apps.abstracts.apps.AbstractConfig",
+    "apps.core.apps.CoreConfig",
     "apps.main.apps.MainConfig",
     "apps.accounts.apps.AccountsConfig",
 ]
@@ -63,14 +63,13 @@ LOGGING = {
             "style": "{",
         },
         "verbose": {
-            "format": "[{asctime}] {levelname} "
-            "{name} {module}.{funcName}: {lineno} - {message}",
+            "format": "[{asctime}] {levelname} {name} {module}.{funcName}:{lineno} - {message}",
             "style": "{",
         },
         "json": {
-        "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-        "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
-},
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        },
     },
     "filters": {
         "require_debug_true": {
@@ -87,16 +86,16 @@ LOGGING = {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "WARNING",
             "filename": "logs/app.log",
-            "maxBytes": 5 * 1024 * 1024,  # 10 MB
-            "backupCount": 3,
+            "maxBytes": 5 * 1024 * 1024,  # 5 MB
+            "backupCount": 5,
             "formatter": "verbose",
             "encoding": "utf-8",
         },
         "debug_only": {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "DEBUG",
-            "filename": "logs/debug_requests.log",
-            "maxBytes": 5 * 1024 * 1024,  # 10 MB
+            "filename": "logs/debug.log",
+            "maxBytes": 5 * 1024 * 1024,  # 5 MB
             "backupCount": 3,
             "formatter": "verbose",
             "filters": ["require_debug_true"],
@@ -106,26 +105,26 @@ LOGGING = {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "INFO",
             "filename": "logs/requests.jsonl",
-            "maxBytes": 5 * 1024 * 1024,
-            "backupCount": 3,
+            "maxBytes": 5 * 1024 * 1024,  # 5 MB
+            "backupCount": 5,
             "formatter": "json",
             "encoding": "utf-8",
         },
     },
     "loggers": {
-        "apps.users": {
+        "apps.accounts": {
             "handlers": ["console", "file"],
-            "level": "DEBUG",
+            "level": "INFO",
             "propagate": False,
         },
-        "apps.blog": {
+        "apps.main": {
             "handlers": ["console", "file"],
-            "level": "DEBUG",
+            "level": "INFO",
             "propagate": False,
         },
-        "django.request": {
-            "handlers": ["file", "debug_only"],
-            "level": "WARNING",
+        "apps.core": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
             "propagate": False,
         },
         "apps.requests": {
@@ -133,31 +132,21 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
-    },
-}
-
-""" Redis cache configuration """
-REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
-REDIS_PORT = os.environ.get("REDIS_PORT", "6379")
-REDIS_DB = os.environ.get("REDIS_DB", "0")
-REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            # optional: compression/timeouts
-            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+        "django.request": {
+            "handlers": ["file"],
+            "level": "WARNING",
+            "propagate": False,
         },
-        "KEY_PREFIX": "tengri",
-    },
-    "article_cache": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,
-        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
-        "KEY_PREFIX": "tengri:article",
+        "celery": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "celery.task": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 
@@ -189,8 +178,8 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_THROTTLE_CLASSES": [
-        "apps.abstracts.trottling.CustomAnonRateThrottle",
-        "apps.abstracts.trottling.CustomUserRateThrottle",
+        "apps.core.throttling.CustomAnonRateThrottle",
+        "apps.core.throttling.CustomUserRateThrottle",
         "rest_framework.throttling.ScopedRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
@@ -198,6 +187,11 @@ REST_FRAMEWORK = {
         "user": "1000/hour",
         "auth_login": "5/minute",
         "auth_register": "10/hour",
+        "article_create": "20/hour",
+        "comment_create": "30/hour",
+        "reaction": "60/hour",
+        "bookmark": "120/hour",
+        "article_view": "300/hour",
     },
 }
 
@@ -224,14 +218,14 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
-    "apps.abstracts.ratelimit.RateLimitMiddleware",
-    "apps.abstracts.middleware.StructuredRequestLoggingMiddleware",
+    "apps.core.ratelimit.RateLimitMiddleware",
+    "apps.core.middleware.StructuredRequestLoggingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "apps.abstracts.locale_middleware.CustomLocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "apps.abstracts.middleware.CurrentUserMiddleware",
+    "apps.core.middleware.CurrentUserMiddleware",
+    "apps.core.locale_middleware.CustomLocaleMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -239,7 +233,7 @@ MIDDLEWARE = [
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -329,11 +323,11 @@ CHANNEL_LAYERS = {
 
 CELERY_BEAT_SCHEDULE = {
     "cleanup_soft_deleted_records": {
-        "task": "apps.abstracts.tasks.cleanup_soft_deleted_records",
+        "task": "apps.core.tasks.cleanup_soft_deleted_records",
         "schedule": crontab(hour=3, minute=0),
     },
     "collect_content_statistics": {
-        "task": "apps.abstracts.tasks.collect_content_statistics",
+        "task": "apps.core.tasks.collect_content_statistics",
         "schedule": crontab(hour=3, minute=0),
     },
 }
@@ -348,7 +342,3 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# Cache TTLs (seconds)
-ARTICLE_DETAIL_TTL = int(os.environ.get("ARTICLE_DETAIL_TTL", 300))
-ARTICLE_LIST_TTL = int(os.environ.get("ARTICLE_LIST_TTL", 60))

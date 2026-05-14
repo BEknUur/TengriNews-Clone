@@ -1,18 +1,14 @@
+# Python modules
+from typing import Any
+
+# Third-party modules
 import pytest
-from dataclasses import dataclass
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
+# Project modules
 from apps.accounts.models import CustomUser
-from apps.main.models import Category, Tag, Article
-
-
-@dataclass
-class AuthData:
-    """Holds authenticated user and its token."""
-
-    user: CustomUser
-    token: str
+from apps.main.models import Article, Category, Tag
 
 
 @pytest.fixture
@@ -22,7 +18,7 @@ def api_client() -> APIClient:
 
 
 @pytest.fixture
-def user(db) -> CustomUser:
+def user(db: Any) -> CustomUser:
     """Creates and returns a regular user."""
     return CustomUser.objects.create_user(
         email="testuser@example.com",
@@ -33,7 +29,7 @@ def user(db) -> CustomUser:
 
 
 @pytest.fixture
-def admin_user(db) -> CustomUser:
+def admin_user(db: Any) -> CustomUser:
     """Creates and returns a superuser (passes IsAdminOnly permission)."""
     return CustomUser.objects.create_superuser(
         email="admin@example.com",
@@ -60,19 +56,19 @@ def admin_client(api_client: APIClient, admin_user: CustomUser) -> APIClient:
 
 
 @pytest.fixture
-def category(db) -> Category:
+def category(db: Any) -> Category:
     """Creates and returns a test Category."""
     return Category.objects.create(name="Tech", slug="tech")
 
 
 @pytest.fixture
-def tag(db) -> Tag:
+def tag(db: Any) -> Tag:
     """Creates and returns a test Tag."""
     return Tag.objects.create(name="Django", slug="django")
 
 
 @pytest.fixture
-def article(db, user: CustomUser, category: Category) -> Article:
+def article(db: Any, user: CustomUser, category: Category) -> Article:
     """Creates and returns a published test Article."""
     return Article.objects.create(
         title="Test Article",

@@ -1,9 +1,7 @@
-"""Project permission classes for TengriNews API."""
-
 # Python modules
 from typing import Any
 
-# Django REST Framework modules
+# Third-party modules
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request as DRFRequest
 from rest_framework.viewsets import ViewSet
@@ -12,52 +10,55 @@ from rest_framework.viewsets import ViewSet
 class RolePermissionMixin:
     """Helper methods for role and authentication checks."""
 
-    def _is_authenticated(self, request: DRFRequest) -> bool:
+    def is_authenticated_user(self, request: DRFRequest) -> bool:
+        """Return True if the request user is authenticated."""
         user = getattr(request, "user", None)
         return bool(user and getattr(user, "is_authenticated", False))
 
-    def _is_admin(self, request: DRFRequest) -> bool:
-        if not self._is_authenticated(request):
+    def is_admin_user(self, request: DRFRequest) -> bool:
+        """Return True if the request user is a superuser or has ADMIN role."""
+        if not self.is_authenticated_user(request):
             return False
-
         user = request.user
-        user_role = getattr(user, "role", None)
+        return bool(
+            getattr(user, "is_superuser", False)
+            or getattr(user, "role", None) == "ADMIN"
+        )
 
-        return bool(getattr(user, "is_superuser", False) or user_role == "ADMIN")
-
-    def _is_editor(self, request: DRFRequest) -> bool:
-        if not self._is_authenticated(request):
+    def is_editor_user(self, request: DRFRequest) -> bool:
+        """Return True if the request user has EDITOR role."""
+        if not self.is_authenticated_user(request):
             return False
-
         return getattr(request.user, "role", None) == "EDITOR"
 
-    def _is_editor_or_admin(self, request: DRFRequest) -> bool:
-        return self._is_editor(request) or self._is_admin(request)
+    def is_editor_or_admin_user(self, request: DRFRequest) -> bool:
+        """Return True if the request user is an editor or admin."""
+        return self.is_editor_user(request) or self.is_admin_user(request)
 
-    def _extract_owner_id(self, obj: Any, *owner_fields: str) -> Any:
+    def extract_owner_id(self, obj: Any, *owner_fields: str) -> Any:
+        """Return the first non-None owner ID found on obj for the given field names."""
         if isinstance(obj, int):
             return obj
-
         for field_name in owner_fields:
             owner_id = getattr(obj, field_name, None)
             if owner_id is not None:
                 return owner_id
-
         return None
 
     def check_permission_or_deny(self, request: DRFRequest) -> None:
         """Raise PermissionDenied if has_permission returns False."""
         from rest_framework.exceptions import PermissionDenied
 
-        if not self.has_permission(request, None):  # type: ignore[attr-defined]
-            raise PermissionDenied(self.message)  # type: ignore[attr-defined]
+        if not self.has_permission(request, None):
+            
+            raise PermissionDenied(self.message)
 
     def check_object_permission_or_deny(self, request: DRFRequest, obj: Any) -> None:
         """Raise PermissionDenied if has_object_permission returns False."""
         from rest_framework.exceptions import PermissionDenied
 
-        if not self.has_object_permission(request, None, obj):  # type: ignore[attr-defined]
-            raise PermissionDenied(self.message)  # type: ignore[attr-defined]
+        if not self.has_object_permission(request, None, obj):
+            raise PermissionDenied(self.message)
 
 
 class IsEditorOrAdmin(RolePermissionMixin, BasePermission):
@@ -66,7 +67,8 @@ class IsEditorOrAdmin(RolePermissionMixin, BasePermission):
     message = "Forbidden! Only editors or admins can perform this action."
 
     def has_permission(self, request: DRFRequest, view: ViewSet) -> bool:
-        return self._is_editor_or_admin(request)
+        """Return whether the request passes class-level permission checks."""
+        return self.is_editor_or_admin_user(request)
 
 
 class IsAdminOnly(RolePermissionMixin, BasePermission):
@@ -75,7 +77,8 @@ class IsAdminOnly(RolePermissionMixin, BasePermission):
     message = "Forbidden! Only admins can perform this action."
 
     def has_permission(self, request: DRFRequest, view: ViewSet) -> bool:
-        return self._is_admin(request)
+        """Return whether the request passes class-level permission checks."""
+        return self.is_admin_user(request)
 
 
 class IsAuthorOrEditorOrAdmin(RolePermissionMixin, BasePermission):
@@ -84,18 +87,18 @@ class IsAuthorOrEditorOrAdmin(RolePermissionMixin, BasePermission):
     message = "Forbidden! Only author, editor, or admin can perform this action."
 
     def has_permission(self, request: DRFRequest, view: ViewSet) -> bool:
-        return self._is_authenticated(request)
+        """Return whether the request passes class-level permission checks."""
+        return self.is_authenticated_user(request)
 
     def has_object_permission(
         self, request: DRFRequest, view: ViewSet, obj: Any
     ) -> bool:
-        if not self._is_authenticated(request):
+        """Return whether the request is allowed for this target object."""
+        if not self.is_authenticated_user(request):
             return False
-
-        if self._is_editor_or_admin(request):
+        if self.is_editor_or_admin_user(request):
             return True
-
-        author_id = self._extract_owner_id(obj, "author_id")
+        author_id = self.extract_owner_id(obj, "author_id")
         return author_id == getattr(request.user, "id", None)
 
 
@@ -105,18 +108,18 @@ class IsCommentAuthorOrAdmin(RolePermissionMixin, BasePermission):
     message = "Forbidden! Only comment author or admin can perform this action."
 
     def has_permission(self, request: DRFRequest, view: ViewSet) -> bool:
-        return self._is_authenticated(request)
+        """Return whether the request passes class-level permission checks."""
+        return self.is_authenticated_user(request)
 
     def has_object_permission(
         self, request: DRFRequest, view: ViewSet, obj: Any
     ) -> bool:
-        if not self._is_authenticated(request):
+        """Return whether the request is allowed for this target object."""
+        if not self.is_authenticated_user(request):
             return False
-
-        if self._is_admin(request):
+        if self.is_admin_user(request):
             return True
-
-        owner_id = self._extract_owner_id(obj, "user_id")
+        owner_id = self.extract_owner_id(obj, "user_id")
         return owner_id == getattr(request.user, "id", None)
 
 
@@ -126,16 +129,16 @@ class IsOwnerOrAdmin(RolePermissionMixin, BasePermission):
     message = "Forbidden! You can modify only your own profile."
 
     def has_permission(self, request: DRFRequest, view: ViewSet) -> bool:
-        return self._is_authenticated(request)
+        """Return whether the request passes class-level permission checks."""
+        return self.is_authenticated_user(request)
 
     def has_object_permission(
         self, request: DRFRequest, view: ViewSet, obj: Any
     ) -> bool:
-        if not self._is_authenticated(request):
+        """Return whether the request is allowed for this target object."""
+        if not self.is_authenticated_user(request):
             return False
-
-        if self._is_admin(request):
+        if self.is_admin_user(request):
             return True
-
-        owner_id = self._extract_owner_id(obj, "id", "user_id")
+        owner_id = self.extract_owner_id(obj, "id", "user_id")
         return owner_id == getattr(request.user, "id", None)

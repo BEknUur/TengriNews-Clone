@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 # Third-party modules
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
-from unfold.widgets import UnfoldAdminTextInputWidget, UnfoldAdminEmailInputWidget
+from unfold.widgets import UnfoldAdminEmailInputWidget, UnfoldAdminTextInputWidget
 
 # Project modules
 from apps.accounts.models import CustomUser

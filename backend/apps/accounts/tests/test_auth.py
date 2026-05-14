@@ -1,5 +1,10 @@
+# Python modules
+from typing import Any
+
+# Third-party modules
 import pytest
 
+# Project modules
 from apps.accounts.models import CustomUser
 
 
@@ -9,7 +14,7 @@ class TestAuthViewSet:
 
     # ─── Register ────────────────────────────────────────────────────────────
 
-    def test_register_returns_201(self, api_client) -> None:
+    def test_register_returns_201(self, api_client: Any) -> None:
         """POST /api/accounts/auth/register/ returns 201."""
         payload = {
             "email": "newuser@example.com",
@@ -24,7 +29,7 @@ class TestAuthViewSet:
         ), f"Expected 201, got {response.status_code}: {response.data}"
 
     def test_register_duplicate_email_returns_400(
-        self, api_client, user: CustomUser
+        self, api_client: Any, user: CustomUser
     ) -> None:
         """POST /api/accounts/auth/register/ with existing email returns 400."""
         payload = {
@@ -41,7 +46,7 @@ class TestAuthViewSet:
 
     # ─── Login ────────────────────────────────────────────────────────────────
 
-    def test_login_returns_200_with_tokens(self, api_client, user: CustomUser) -> None:
+    def test_login_returns_200_with_tokens(self, api_client: Any, user: CustomUser) -> None:
         """POST /api/accounts/auth/token/ returns 200 with access token."""
         payload = {"email": "testuser@example.com", "password": "testpass123"}
         response = api_client.post("/api/accounts/auth/token/", payload)
@@ -51,7 +56,7 @@ class TestAuthViewSet:
         assert "access" in response.data, "Response must contain 'access' token"
 
     def test_login_wrong_password_returns_400(
-        self, api_client, user: CustomUser
+        self, api_client: Any, user: CustomUser
     ) -> None:
         """POST /api/accounts/auth/token/ with wrong password returns 400."""
         payload = {"email": "testuser@example.com", "password": "wrongpass"}
@@ -70,7 +75,7 @@ class TestAuthViewSet:
     )
     def test_login_parametrized(
         self,
-        api_client,
+        api_client: Any,
         user: CustomUser,
         email: str,
         password: str,
@@ -87,7 +92,7 @@ class TestAuthViewSet:
 
     # ─── Token Refresh ────────────────────────────────────────────────────────
 
-    def test_token_refresh_returns_200(self, api_client, user: CustomUser) -> None:
+    def test_token_refresh_returns_200(self, api_client: Any, user: CustomUser) -> None:
         """POST /api/accounts/auth/token/refresh/ returns 200 with new access."""
         login_response = api_client.post(
             "/api/accounts/auth/token/",
@@ -105,9 +110,3 @@ class TestAuthViewSet:
         ), f"Expected 200 on refresh, got {response.status_code}: {response.data}"
         assert "access" in response.data, "Refresh response must contain 'access' token"
 
-
-# BEKZAT MAKE THE TESTS FOLDER SEPERATELY!!!
-"""
-
-THERE MAKE THE FOLDERS WITH THE TESTS 
-"""

@@ -1,5 +1,13 @@
+# Python modules
+from typing import Any
+
+# Django modules
+from django.test import RequestFactory
+
+# Third-party modules
 import pytest
 
+# Project modules
 from apps.main.serializers import (
     ArticleCreateUpdateSerializer,
     ArticleDetailSerializer,
@@ -7,13 +15,11 @@ from apps.main.serializers import (
     CategorySerializer,
     TagSerializer,
 )
-from django.test import RequestFactory
-
-
 
 
 @pytest.mark.django_db
-def test_category_serializer_fields(category):
+def test_category_serializer_fields(category: Any) -> None:
+    """Test `test_category_serializer_fields`."""
     data = CategorySerializer(category).data
 
     assert data["id"] == category.id
@@ -24,7 +30,8 @@ def test_category_serializer_fields(category):
 
 
 @pytest.mark.django_db
-def test_tag_serializer_fields(tag):
+def test_tag_serializer_fields(tag: Any) -> None:
+    """Test `test_tag_serializer_fields`."""
     data = TagSerializer(tag).data
 
     assert data["id"] == tag.id
@@ -35,7 +42,8 @@ def test_tag_serializer_fields(tag):
 
 
 @pytest.mark.django_db
-def test_article_list_serializer_returns_nested_category_and_tags(article, tag):
+def test_article_list_serializer_returns_nested_category_and_tags(article: Any, tag: Any) -> None:
+    """Test `test_article_list_serializer_returns_nested_category_and_tags`."""
     article.tags.add(tag)
 
     data = ArticleListSerializer(article).data
@@ -47,7 +55,8 @@ def test_article_list_serializer_returns_nested_category_and_tags(article, tag):
 
 
 @pytest.mark.django_db
-def test_article_detail_serializer_contains_content_comments_and_reactions(article):
+def test_article_detail_serializer_contains_content_comments_and_reactions(article: Any) -> None:
+    """Test `test_article_detail_serializer_contains_content_comments_and_reactions`."""
     data = ArticleDetailSerializer(article).data
 
     assert data["content"] == article.content
@@ -57,11 +66,12 @@ def test_article_detail_serializer_contains_content_comments_and_reactions(artic
 
 @pytest.mark.django_db
 def test_article_create_update_serializer_accepts_category_and_tag_ids(
-    rf,
-    user,
-    category,
-    tag,
-):
+    rf: Any,
+    user: Any,
+    category: Any,
+    tag: Any,
+) -> None:
+    """Test `test_article_create_update_serializer_accepts_category_and_tag_ids`."""
     request = rf.post("/api/articles/")
     request.user = user
 
@@ -86,4 +96,5 @@ def test_article_create_update_serializer_accepts_category_and_tag_ids(
 
 @pytest.fixture
 def rf() -> RequestFactory:
+    """Fixture `rf`."""
     return RequestFactory()

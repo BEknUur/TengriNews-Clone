@@ -1,10 +1,8 @@
-# Pythpon modules
-from typing import Any, TYPE_CHECKING
+# Python modules
+from typing import TYPE_CHECKING, Any
 
 # Django modules
-from django.contrib.auth.models import (
-    BaseUserManager,
-)
+from django.contrib.auth.models import BaseUserManager
 
 # Project modules
 if TYPE_CHECKING:

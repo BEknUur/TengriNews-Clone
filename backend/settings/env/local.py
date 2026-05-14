@@ -24,15 +24,21 @@ CACHES: dict = {
     }
 }
 
-# Use eager Celery tasks in local/test mode to avoid broker dependency.
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
-# Keep local/test API runs deterministic without throttle state bleed.
+
 REST_FRAMEWORK = {
-    **REST_FRAMEWORK,  # type: ignore[name-defined] # noqa: F405
+    **REST_FRAMEWORK,  # noqa: F405
     "DEFAULT_THROTTLE_CLASSES": [],
     "DEFAULT_THROTTLE_RATES": {},
 }
 
 DISABLE_AUTH_THROTTLING = True
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DISABLE_RATE_LIMIT = True
+
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.MD5PasswordHasher",
+]

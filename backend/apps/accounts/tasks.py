@@ -1,7 +1,10 @@
+# Python modules
+from typing import Any
+
 # Django modules
+from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.translation import override, gettext as _
 
@@ -20,7 +23,8 @@ from apps.accounts.models import CustomUser
     retry_jitter=True,
     max_retries=5,
 )
-def send_welcome_email_task(self, user_id: int) -> str | Exception:
+def send_welcome_email_task(self: Any, user_id: int) -> str | Exception:
+    """Execute send welcome email task logic and return its result."""
     user: CustomUser = CustomUser.objects.filter(
         id=user_id, deleted_at__isnull=True
     ).first()
@@ -37,7 +41,9 @@ def send_welcome_email_task(self, user_id: int) -> str | Exception:
     try:
         user_lang = getattr(user, "preferred_language", None) or "en"
         with override(user_lang):
-            subject = render_to_string("emails/welcome/subject.txt", {"user": user}).strip()
+            subject = render_to_string(
+                "emails/welcome/subject.txt", {"user": user}
+            ).strip()
             message = render_to_string("emails/welcome/body.txt", {"user": user})
 
         send_mail(
@@ -47,7 +53,9 @@ def send_welcome_email_task(self, user_id: int) -> str | Exception:
             recipient_list=[user.email],
         )
         cache.set(done_key, "1", timeout=60 * 60 * 24)
-        return _("Welcome email for user %(user_id)s has been sent.") % {"user_id": user_id}
+        return _("Welcome email for user %(user_id)s has been sent.") % {
+            "user_id": user_id
+        }
     except Exception as e:
         raise e
     finally:

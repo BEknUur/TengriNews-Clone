@@ -1,11 +1,14 @@
-"""Views for JWT authentication (register, login, token refresh)."""
-
 from __future__ import annotations
 
+# Python modules
+import logging
 from typing import Any
 
-import logging
+# Django modules
+from django.conf import settings
+from django.db import transaction
 
+# Third-party modules
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -15,15 +18,28 @@ from rest_framework.status import (
     HTTP_200_OK,
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
+    HTTP_429_TOO_MANY_REQUESTS,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
+from rest_framework.throttling import BaseThrottle, ScopedRateThrottle
 from rest_framework.viewsets import ViewSet
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
-from apps.abstracts.decorators import validate_serializer_data
-from apps.abstracts.mixins import DRFResponseMixin
-from apps.accounts.serailizers import LoginSerializer, RegistrationSerializer
+# Project modules
+from apps.core.decorators import validate_serializer_data
+from apps.core.mixins import DRFResponseMixin
+from apps.core.throttling import CustomAnonRateThrottle, CustomUserRateThrottle
+from apps.accounts.schema_serializers import (
+    AccessTokenResponseSerializer,
+    LoginRequestSerializer,
+    RefreshTokenRequestSerializer,
+    RegisterRequestSerializer,
+    RegisterResponseSerializer,
+    TokenPairResponseSerializer,
+)
+from apps.accounts.serializers import LoginSerializer, RegistrationSerializer
+from apps.accounts.tasks import send_welcome_email_task
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +48,32 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
     """Handles registration, login, and token refresh."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [
+        CustomAnonRateThrottle,
+        CustomUserRateThrottle,
+        ScopedRateThrottle,
+    ]
+
+    def get_throttles(self) -> list[BaseThrottle]:
+        """Assign scoped throttle rates for login/register actions."""
+        if getattr(settings, "DISABLE_AUTH_THROTTLING", False):
+            return []
+
+        if self.action == "login":
+            self.throttle_scope = "auth_login"
+        elif self.action == "register":
+            self.throttle_scope = "auth_register"
+        return super().get_throttles()
 
     @extend_schema(
+        tags=["Auth"],
         summary="Obtain JWT tokens",
-        request=LoginSerializer,
+        description="Authenticates with email and password and returns access + refresh JWT tokens. Rate limited.",
+        request=LoginRequestSerializer,
         responses={
-            HTTP_200_OK: LoginSerializer,
+            HTTP_200_OK: TokenPairResponseSerializer,
             HTTP_400_BAD_REQUEST: OpenApiResponse(description="Invalid credentials"),
+            HTTP_429_TOO_MANY_REQUESTS: OpenApiResponse(description="Rate limit exceeded"),
             HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(description="Internal server error"),
         },
     )
@@ -50,11 +85,14 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         return DRFResponse(data=kwargs["validated_data"], status=HTTP_200_OK)
 
     @extend_schema(
+        tags=["Auth"],
         summary="Register a new user",
-        request=RegistrationSerializer,
+        description="Creates a new user account and returns JWT tokens. Sends a welcome email asynchronously. Rate limited.",
+        request=RegisterRequestSerializer,
         responses={
-            HTTP_201_CREATED: RegistrationSerializer,
+            HTTP_201_CREATED: RegisterResponseSerializer,
             HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            HTTP_429_TOO_MANY_REQUESTS: OpenApiResponse(description="Rate limit exceeded"),
             HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(description="Internal server error"),
         },
     )
@@ -64,6 +102,7 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         """Create a new user account and return JWT tokens."""
         serializer: RegistrationSerializer = kwargs["serializer"]
         user = serializer.save()
+        transaction.on_commit(lambda: send_welcome_email_task.delay(user.id))
         logger.info("Registered: user_id=%s", user.pk)
         return self.get_drf_response(
             request=request,
@@ -73,10 +112,12 @@ class AuthViewSet(DRFResponseMixin, ViewSet):
         )
 
     @extend_schema(
+        tags=["Auth"],
         summary="Refresh access token",
-        request=TokenRefreshSerializer,
+        description="Exchanges a valid refresh token for a new access token.",
+        request=RefreshTokenRequestSerializer,
         responses={
-            HTTP_200_OK: TokenRefreshSerializer,
+            HTTP_200_OK: AccessTokenResponseSerializer,
             HTTP_400_BAD_REQUEST: OpenApiResponse(description="Invalid or expired refresh token"),
             HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(description="Internal server error"),
         },

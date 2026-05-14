@@ -226,7 +226,7 @@ class ArticleCommentCreateRequestSerializer(serializers.Serializer):
 class ArticleReactionCreateRequestSerializer(serializers.Serializer):
     """Schema for creating reaction under article detail endpoint."""
 
-    type = serializers.ChoiceField(choices=Reaction.REACTION_CHOICES)
+    type = serializers.ChoiceField(choices=Reaction.ReactionType.choices)
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +283,7 @@ class ReactionResponseSerializer(serializers.Serializer):
     user = serializers.IntegerField(read_only=True)
     article = serializers.IntegerField(read_only=True, allow_null=True)
     comment = serializers.IntegerField(read_only=True, allow_null=True)
-    type = serializers.ChoiceField(choices=Reaction.REACTION_CHOICES, read_only=True)
+    type = serializers.ChoiceField(choices=Reaction.ReactionType.choices, read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
 
 
@@ -292,4 +292,4 @@ class ReactionCreateRequestSerializer(serializers.Serializer):
 
     article = serializers.IntegerField(required=False, allow_null=True)
     comment = serializers.IntegerField(required=False, allow_null=True)
-    type = serializers.ChoiceField(choices=Reaction.REACTION_CHOICES)
+    type = serializers.ChoiceField(choices=Reaction.ReactionType.choices)

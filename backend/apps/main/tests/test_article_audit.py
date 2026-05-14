@@ -1,10 +1,16 @@
+# Python modules
+from typing import Any
+
+# Third-party modules
 import pytest
 
+# Project modules
 from apps.main.models import Article, ArticleAuditLog
 
 
 @pytest.mark.django_db
-def test_article_create_writes_audit_log(user, category):
+def test_article_create_writes_audit_log(user: Any, category: Any) -> None:
+    """Test `test_article_create_writes_audit_log`."""
     article = Article.objects.create(
         title="Audit Article",
         slug="audit-article",
@@ -23,7 +29,8 @@ def test_article_create_writes_audit_log(user, category):
 
 
 @pytest.mark.django_db
-def test_article_update_writes_audit_log(article):
+def test_article_update_writes_audit_log(article: Any) -> None:
+    """Test `test_article_update_writes_audit_log`."""
     article.title = "Updated Audit Title"
     article.save(update_fields=["title"])
 

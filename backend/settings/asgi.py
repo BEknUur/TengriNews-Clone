@@ -1,11 +1,11 @@
 # Python modules
 import os
 
-# Third-party modules
-from channels.routing import ProtocolTypeRouter, URLRouter
-
 # Django modules
 from django.core.asgi import get_asgi_application
+
+# Third-party modules
+from channels.routing import ProtocolTypeRouter, URLRouter
 
 # Project modules
 from apps.main.routing import websocket_urlpatterns

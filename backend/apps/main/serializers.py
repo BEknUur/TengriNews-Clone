@@ -1,9 +1,9 @@
-"""Serializers for categories, tags, articles, comments, and reactions."""
-
 from __future__ import annotations
 
+# Python modules
 from typing import Any
 
+# Third-party modules
 from rest_framework.serializers import (
     CharField,
     ModelSerializer,
@@ -12,6 +12,7 @@ from rest_framework.serializers import (
     ValidationError,
 )
 
+# Project modules
 from apps.main.models import Article, Bookmark, Category, Comment, Reaction, Tag
 
 
@@ -19,6 +20,7 @@ class CategorySerializer(ModelSerializer):
     """Serialize a Category with optional parent nesting."""
 
     class Meta:
+        """Meta class."""
         model = Category
         fields: tuple[str, ...] = (
             "id",
@@ -34,6 +36,7 @@ class TagSerializer(ModelSerializer):
     """Serialize a Tag."""
 
     class Meta:
+        """Meta class."""
         model = Tag
         fields: tuple[str, ...] = (
             "id", 
@@ -52,6 +55,7 @@ class ArticleListSerializer(ModelSerializer):
     author = SerializerMethodField()
 
     class Meta:
+        """Meta class."""
         model = Article
         fields: tuple[str, ...] = (
             "id",
@@ -88,6 +92,7 @@ class ArticleDetailSerializer(ArticleListSerializer):
     reactions_count = SerializerMethodField()
 
     class Meta(ArticleListSerializer.Meta):
+        """Meta class."""
         fields = ArticleListSerializer.Meta.fields + (
             "content",
             "comments",
@@ -95,13 +100,12 @@ class ArticleDetailSerializer(ArticleListSerializer):
         )
 
     def get_comments(self, obj: Article) -> list[dict[str, Any]]:
-        """Return active top-level comments ordered by creation time."""
-        qs = obj.comments.filter(is_active=True, parent=None).order_by("created_at")
-        return CommentSerializer(qs, many=True).data
+        """Return prefetched top-level comments (uses Prefetch from the view)."""
+        return CommentSerializer(obj.comments.all(), many=True).data
 
     def get_reactions_count(self, obj: Article) -> int:
-        """Return total reaction count for the article."""
-        return obj.reactions.count()
+        """Return reaction count using prefetched data to avoid extra query."""
+        return len(obj.reactions.all())
 
 
 class ArticleCreateUpdateSerializer(ModelSerializer):
@@ -110,6 +114,7 @@ class ArticleCreateUpdateSerializer(ModelSerializer):
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True, required=False)
 
     class Meta:
+        """Meta class."""
         model = Article
         fields: tuple[str, ...] = (
             "title",
@@ -149,6 +154,7 @@ class CommentSerializer(ModelSerializer):
     replies = SerializerMethodField()
 
     class Meta:
+        """Meta class."""
         model = Comment
         fields: tuple[str, ...] = (
             "id",
@@ -168,15 +174,17 @@ class CommentSerializer(ModelSerializer):
         return {"id": obj.user_id, "email": obj.user.email}
 
     def get_replies(self, obj: Comment) -> list[dict[str, Any]]:
-        """Return active nested replies."""
-        qs = obj.replies.filter(is_active=True).order_by("created_at")
-        return CommentSerializer(qs, many=True).data
+        """Return prefetched replies (max 1 level deep to prevent recursion)."""
+        if obj.parent_id is not None:
+            return []
+        return CommentSerializer(obj.replies.all(), many=True).data
 
 
 class CommentCreateSerializer(ModelSerializer):
     """Serializer for creating a new comment or reply."""
 
     class Meta:
+        """Meta class."""
         model = Comment
         fields: tuple[str, ...] = ("article", "parent", "content")
 
@@ -199,6 +207,7 @@ class ReactionSerializer(ModelSerializer):
     """Serializer for creating and reading reactions."""
 
     class Meta:
+        """Meta class."""
         model = Reaction
         fields: tuple[str, ...] = (
             "id",
@@ -235,6 +244,7 @@ class BookmarkSerializer(ModelSerializer):
     article = ArticleListSerializer(read_only=True)
 
     class Meta:
+        """Meta class."""
         model = Bookmark
         fields: tuple[str, ...] = (
             "id",
