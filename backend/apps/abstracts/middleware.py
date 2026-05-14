@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import json
+import logging
 import threading
+import time
+import uuid
+from typing import Any
 
 from django.http import HttpRequest, HttpResponse
 
+logger = logging.getLogger("apps.requests")
 _request_state = threading.local()
 
 
@@ -36,3 +42,47 @@ class CurrentUserMiddleware:
             return self.get_response(request)
         finally:
             clear_current_user()
+
+
+class StructuredRequestLoggingMiddleware:
+    """Log request/response metadata as structured JSON."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        started_at = time.perf_counter()
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+
+        response = self.get_response(request)
+
+        duration_ms = round((time.perf_counter() - started_at) * 1000, 2)
+        user = getattr(request, "user", None)
+        user_id = getattr(user, "id", None) if getattr(user, "is_authenticated", False) else None
+
+        payload: dict[str, Any] = {
+            "event": "request_finished",
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.path,
+            "status_code": response.status_code,
+            "duration_ms": duration_ms,
+            "user_id": user_id,
+            "ip": self.get_client_ip(request),
+        }
+
+        logger.info(json.dumps(payload, ensure_ascii=False))
+        response["X-Request-ID"] = request_id
+        return response
+
+    def get_client_ip(self, request: HttpRequest) -> str | None:
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if x_forwarded_for:
+            return x_forwarded_for.split(",")[0].strip()
+
+        x_real_ip = request.META.get("HTTP_X_REAL_IP")
+        if x_real_ip:
+            return x_real_ip.strip()
+
+        remote_addr = request.META.get("REMOTE_ADDR")
+        return remote_addr.strip() if remote_addr else None

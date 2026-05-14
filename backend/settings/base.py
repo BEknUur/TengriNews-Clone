@@ -67,6 +67,10 @@ LOGGING = {
             "{name} {module}.{funcName}: {lineno} - {message}",
             "style": "{",
         },
+        "json": {
+            "format": "{message}",
+            "style": "{",
+        },
     },
     "filters": {
         "require_debug_true": {
@@ -98,6 +102,15 @@ LOGGING = {
             "filters": ["require_debug_true"],
             "encoding": "utf-8",
         },
+        "request_json_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "INFO",
+            "filename": "logs/requests.jsonl",
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 3,
+            "formatter": "json",
+            "encoding": "utf-8",
+        },
     },
     "loggers": {
         "apps.users": {
@@ -113,6 +126,11 @@ LOGGING = {
         "django.request": {
             "handlers": ["file", "debug_only"],
             "level": "WARNING",
+            "propagate": False,
+        },
+        "apps.requests": {
+            "handlers": ["console", "request_json_file"],
+            "level": "INFO",
             "propagate": False,
         },
     },
@@ -182,6 +200,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "apps.abstracts.ratelimit.RateLimitMiddleware",
+    "apps.abstracts.middleware.StructuredRequestLoggingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
