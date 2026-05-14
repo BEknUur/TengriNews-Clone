@@ -261,6 +261,15 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"],  # noqa: F405
+        },
+    },
+}
+
 CELERY_BEAT_SCHEDULE = {
     "cleanup_soft_deleted_records": {
         "task": "apps.abstracts.tasks.cleanup_soft_deleted_records",
