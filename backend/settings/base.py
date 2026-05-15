@@ -3,6 +3,7 @@
 # Python modules
 import os
 from datetime import timedelta
+from pathlib import Path
 
 # Third-party modules
 from celery.schedules import crontab
@@ -14,7 +15,7 @@ from settings.conf import *  # noqa: F403
 Path configurations
 """
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent
 os.makedirs(os.path.join(BASE_DIR, "logs"), exist_ok=True)
 ROOT_URLCONF = "settings.urls"
 WSGI_APPLICATION = "settings.wsgi.application"
@@ -54,23 +55,38 @@ INSTALLED_APPS = DJANGO_AND_THIRD_PARTY_APPS + PROJECT_APPS
 Logging
 """
 
+# Determine if pythonjsonlogger is available
+try:
+    import pythonjsonlogger  # noqa: F401
+    _JSON_FORMATTER_AVAILABLE = True
+except ImportError:
+    _JSON_FORMATTER_AVAILABLE = False
+
+# Build formatters dict conditionally
+_formatters = {
+    "simple": {
+        "format": "[{levelname}] {message}",
+        "style": "{",
+    },
+    "verbose": {
+        "format": "[{asctime}] {levelname} {name} {module}.{funcName}:{lineno} - {message}",
+        "style": "{",
+    },
+}
+
+if _JSON_FORMATTER_AVAILABLE:
+    _formatters["json"] = {
+        "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+        "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+    }
+else:
+    # Fallback to verbose if pythonjsonlogger not available
+    _formatters["json"] = _formatters["verbose"]
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {
-        "simple": {
-            "format": "[{levelname}] {message}",
-            "style": "{",
-        },
-        "verbose": {
-            "format": "[{asctime}] {levelname} {name} {module}.{funcName}:{lineno} - {message}",
-            "style": "{",
-        },
-        "json": {
-            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
-        },
-    },
+    "formatters": _formatters,
     "filters": {
         "require_debug_true": {
             "()": "django.utils.log.RequireDebugTrue",

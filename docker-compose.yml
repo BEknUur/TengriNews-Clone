@@ -88,7 +88,8 @@ services:
       context: .
       dockerfile: dockerfiles/backend.Dockerfile
     working_dir: /backend
-    command: celery -A settings.celery:app beat --loglevel=info
+    # Remove possibly corrupted schedule DB before starting beat
+    command: sh -c "rm -f /backend/celerybeat-schedule && celery -A settings.celery:app beat --loglevel=info"
     volumes:
       - ./backend:/backend
     env_file:

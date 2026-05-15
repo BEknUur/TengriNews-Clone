@@ -14,7 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY ./backend/pyproject.toml ./
 COPY ./backend .
 
-RUN uv pip install --system --no-cache . \
+# Ensure json logger is present in system site-packages for runtime processes
+RUN uv pip install --system --no-cache python-json-logger \
+    && uv pip install --system --no-cache . \
     && rm -rf /root/.cache
 
 EXPOSE 8000
