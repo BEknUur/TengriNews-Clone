@@ -15,8 +15,8 @@ def test_external_endpoint_cache_and_error(monkeypatch):
     async def fake_fetch_external(url, params=None, headers=None):
         return {"id": "x", "title": "ok", "score": 1.23}
 
-    import apps.main.utils.async_client as ac
-    monkeypatch.setattr(ac, "fetch_external", fake_fetch_external)
+    # Patch where the view imported the function so the view uses the fake
+    monkeypatch.setattr("apps.main.views.async_endpoint.fetch_external", fake_fetch_external)
 
     resp1 = client.get("/api/external/?q=hello")
     assert resp1.status_code == 200
@@ -24,7 +24,7 @@ def test_external_endpoint_cache_and_error(monkeypatch):
 
     async def fail_fetch(*a, **kw):
         raise Exception("down")
-    monkeypatch.setattr(ac, "fetch_external", fail_fetch)
+    monkeypatch.setattr("apps.main.views.async_endpoint.fetch_external", fail_fetch)
 
     resp2 = client.get("/api/external/?q=hello")
     assert resp2.status_code == 200

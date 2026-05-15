@@ -1,0 +1,37 @@
+# Python / general
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.env.* 
+*.sqlite3
+*.log
+
+# Virtualenv / builds
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Git / editor
+.git
+.gitignore
+.idea/
+.vscode/
+*.swp
+
+# Node / assets
+node_modules/
+
+# Docker / CI
+Dockerfile*
+docker-compose*.yml
+
+# Local files that must not be in image
+local_settings.py
+instance/
+logs/
+celerybeat-schedule
