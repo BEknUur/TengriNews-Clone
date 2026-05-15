@@ -40,3 +40,9 @@ CACHES: dict = {
         },
     }
 }
+# Provide article_cache alias so apps/main/utils/cache.py can resolve an explicit cache
+CACHES["article_cache"] = {
+    "BACKEND": "django_redis.cache.RedisCache",
+    "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+    "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+}

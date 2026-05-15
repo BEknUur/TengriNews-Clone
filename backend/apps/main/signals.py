@@ -13,6 +13,11 @@ from apps.core.cache import invalidate
 from apps.core.middleware import get_current_user
 from apps.main.models import Article, ArticleAuditLog, Category, Comment, Reaction, Tag
 from apps.main.realtime import broadcast_article_created, broadcast_comment_created
+from apps.main.utils.cache import (
+    cache_delete,
+    make_article_detail_key,
+    incr_list_version,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,19 +36,60 @@ def invalidate_tag_cache(sender: type[Tag], **kwargs: Any) -> None:
 @receiver(post_save, sender=Article)
 @receiver(post_delete, sender=Article)
 def invalidate_article_cache(sender: type[Article], instance: Article, **kwargs: Any) -> None:
+    # Namespace-level invalidation used across the app/tests
     invalidate("articles")
+
+    # Also keep article-specific cache in sync: delete detail key and bump list version
+    try:
+        if instance and getattr(instance, "pk", None) is not None:
+            cache_delete(make_article_detail_key(instance.pk))
+    except Exception:
+        pass
+
+    try:
+        incr_list_version()
+    except Exception:
+        pass
 
 
 @receiver(post_save, sender=Comment)
 @receiver(post_delete, sender=Comment)
 def invalidate_article_cache_on_comment(sender: type[Comment], instance: Comment, **kwargs: Any) -> None:
+    # When comments change, invalidate articles namespace and bump list version;
+    # also evict the specific article detail cache if available.
     invalidate("articles")
+    try:
+        article_id = getattr(instance, "article_id", None) or getattr(instance, "article", None)
+        if article_id and hasattr(article_id, "pk"):
+            aid = article_id.pk
+        else:
+            aid = article_id
+        if aid is not None:
+            cache_delete(make_article_detail_key(aid))
+    except Exception:
+        pass
+    try:
+        incr_list_version()
+    except Exception:
+        pass
 
 
 @receiver(post_save, sender=Reaction)
 @receiver(post_delete, sender=Reaction)
 def invalidate_article_cache_on_reaction(sender: type[Reaction], instance: Reaction, **kwargs: Any) -> None:
     invalidate("articles")
+    try:
+        aid = getattr(instance, "article_id", None) or getattr(instance, "article", None)
+        if aid and hasattr(aid, "pk"):
+            aid = aid.pk
+        if aid is not None:
+            cache_delete(make_article_detail_key(aid))
+    except Exception:
+        pass
+    try:
+        incr_list_version()
+    except Exception:
+        pass
 
 
 @receiver(post_save, sender=Article)

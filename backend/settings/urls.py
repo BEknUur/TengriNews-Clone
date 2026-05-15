@@ -1,6 +1,7 @@
 # Django modules
 from django.contrib import admin
 from django.urls import include, path
+from apps.main.views.async_endpoint import ExternalDataView
 
 # Third-party modules
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -34,4 +35,5 @@ urlpatterns = [
         SpectacularSwaggerView.as_view(url_name="schema"),
         name="swagger-ui",
     ),
+    path("api/external/", ExternalDataView.as_view(), name="external-data"),
 ]

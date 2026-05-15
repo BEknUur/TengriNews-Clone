@@ -30,6 +30,8 @@ services:
       - .env
     environment:
       REDIS_HOST: redis
+
+      PYTHONPATH: /backend
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,6 +54,8 @@ services:
     depends_on:
       - postgres
       - redis
+    environment:
+      PYTHONPATH: /backend
 
   redis:
     image: redis:7-alpine
@@ -77,6 +81,7 @@ services:
       - .env
     environment:
       REDIS_HOST: redis
+      PYTHONPATH: /backend
     depends_on:
       redis:
         condition: service_healthy
@@ -96,6 +101,7 @@ services:
       - .env
     environment:
       REDIS_HOST: redis
+      PYTHONPATH: /backend
     depends_on:
       redis:
         condition: service_healthy

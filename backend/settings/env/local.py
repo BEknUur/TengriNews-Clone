@@ -23,6 +23,11 @@ CACHES: dict = {
         "LOCATION": "tengrinews-local-cache",
     }
 }
+# Alias for article-specific cache used by apps/main/utils/cache.py
+CACHES["article_cache"] = {
+    "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    "LOCATION": "tengrinews-local-article-cache",
+}
 
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True

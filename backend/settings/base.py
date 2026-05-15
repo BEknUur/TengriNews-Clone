@@ -358,3 +358,13 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+"""External API settings"""
+EXTERNAL_API_URL = os.environ.get("EXTERNAL_API_URL", "https://api.example.com/data")
+EXTERNAL_API_URL_TIMEOUT = {
+    "connect": float(os.environ.get("EXTERNAL_API_URL_CONNECT_TIMEOUT", 2.0)),
+    "read": float(os.environ.get("EXTERNAL_API_URL_READ_TIMEOUT", 5.0)),
+}
+EXTERNAL_API_RETRIES = int(os.environ.get("EXTERNAL_API_RETRIES", 2))
+EXTERNAL_API_BACKOFF = float(os.environ.get("EXTERNAL_API_BACKOFF", 0.5))
+EXTERNAL_API_TTL = int(os.environ.get("EXTERNAL_API_TTL", 300))
