@@ -116,6 +116,9 @@ class Article(AbstractTimeStamptModel):
         ordering = ["-published_at", "-id"]
         indexes = [
             Index(fields=["published_at", "id"]),
+            Index(fields=["author", "-created_at"], name="main_art_author_created_idx"),
+            Index(fields=["category", "-created_at"], name="main_art_category_created_idx"),
+            Index(fields=["-created_at"], name="main_art_created_idx"),
         ]
 
     def save(self, *args: Any, **kwargs: Any) -> None:
