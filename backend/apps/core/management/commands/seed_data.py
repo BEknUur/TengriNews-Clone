@@ -1,8 +1,19 @@
+"""Seed command with safer and idempotent behavior.
+
+Enhancements in this version:
+- production guard (requires --force to run when DEBUG is False)
+- confirmation prompt for destructive `--clear` (can be bypassed with --noinput or --force)
+- idempotent user creation (get_or_create)
+- idempotent article creation/update (update_or_create by slug)
+"""
+
 # Python modules
 import random
+import sys
 from typing import Any
 
 # Django modules
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.text import slugify
@@ -20,7 +31,7 @@ fake = Faker("ru_RU")
 class Command(BaseCommand):
     """Command class."""
 
-    help = "Seed the database "
+    help = "Seed the database with demo data (safe, idempotent-ish)."
 
     def add_arguments(self, parser: Any) -> Any:
         """Register custom CLI arguments for this management command."""
@@ -29,12 +40,24 @@ class Command(BaseCommand):
         parser.add_argument("--tags", type=int, default=12)
         parser.add_argument("--articles", type=int, default=20)
         parser.add_argument("--comments", type=int, default=40)
-        parser.add_argument("--clear", action="store_true")
+        parser.add_argument("--clear", action="store_true", help="Clear seeded data before seeding")
+        parser.add_argument("--noinput", action="store_true", help="Do not prompt for interactive confirmation")
+        parser.add_argument("--force", action="store_true", help="Force run even when DEBUG is False")
 
     @transaction.atomic
     def handle(self, *args: Any, **options: Any) -> Any:
         """Execute the management command workflow using parsed options."""
-        if options["clear"]:
+        # Production guard
+        if not settings.DEBUG and not options.get("force"):
+            self.stderr.write("Refusing to run seed in non-debug environment. Use --force to override.")
+            sys.exit(1)
+
+        if options.get("clear"):
+            if not options.get("noinput") and not options.get("force"):
+                confirm = input("This will DELETE seeded data. Type 'yes' to continue: ")
+                if confirm.lower() != "yes":
+                    self.stdout.write("Aborted.")
+                    return
             self._clear()
 
         users = self._seed_users(options["users"])
@@ -54,9 +77,10 @@ class Command(BaseCommand):
         Tag.objects.all().delete()
         Category.objects.all().delete()
         CustomUser.objects.filter(is_superuser=False).delete()
+        self.stdout.write(self.style.WARNING("Cleared seeded data (non-superusers removed)."))
 
     def _seed_users(self, count: int) -> list[CustomUser]:
-        """Run the internal helper that handles seed users."""
+        """Run the internal helper that handles seed users (idempotent by email)."""
         users = []
 
         admin, _ = CustomUser.objects.get_or_create(
@@ -64,7 +88,7 @@ class Command(BaseCommand):
             defaults={
                 "first_name": "Admin",
                 "last_name": "Tengri",
-                "role": CustomUser.ADMIN,
+                "role": CustomUser.Role.ADMIN,
                 "is_staff": True,
                 "is_active": True,
             },
@@ -72,21 +96,33 @@ class Command(BaseCommand):
         admin.set_password("admin123")
         admin.save()
 
-        for _ in range(count):
-            email = fake.unique.email()
-            role = random.choice([CustomUser.USER, CustomUser.USER, CustomUser.EDITOR])
-            user = CustomUser.objects.create(
+        created = 0
+        for i in range(count):
+            # deterministic-ish email to avoid duplicates across runs
+            email = f"seed_user_{i+1}@example.test"
+            first = fake.first_name()
+            last = fake.last_name()
+            role = random.choice([
+                CustomUser.Role.USER,
+                CustomUser.Role.USER,
+                CustomUser.Role.EDITOR,
+            ])
+            user, created_flag = CustomUser.objects.get_or_create(
                 email=email,
-                first_name=fake.first_name(),
-                last_name=fake.last_name(),
-                role=role,
-                is_active=True,
+                defaults={
+                    "first_name": first,
+                    "last_name": last,
+                    "role": role,
+                    "is_active": True,
+                },
             )
-            user.set_password("password123")
-            user.save()
+            if created_flag:
+                user.set_password("password123")
+                user.save()
+                created += 1
             users.append(user)
 
-        self.stdout.write(self.style.SUCCESS(f"  {count + 1} users created"))
+        self.stdout.write(self.style.SUCCESS(f"  {count + 1} users ensured ({created} created)") )
         return users
 
     def _seed_categories(self, count: int) -> list[Category]:
@@ -145,34 +181,34 @@ class Command(BaseCommand):
         categories: list[Category],
         tags: list[Tag],
     ) -> list[Article]:
-        """Run the internal helper that handles seed articles."""
+        """Run the internal helper that handles seed articles (idempotent by slug)."""
         self.stdout.write("Creating articles...")
         articles = []
 
-        for _ in range(count):
+        for i in range(count):
             title = fake.sentence(nb_words=6).rstrip(".")
-            slug = slugify(title)
-            if not slug or Article.objects.filter(slug=slug).exists():
-                slug = f"{slug}-{fake.uuid4()[:8]}"
+            base_slug = slugify(title) or f"article-{i+1}"
+            # create deterministic slug to avoid random suffix on each run
+            slug = f"{base_slug}-{i+1}"
 
             is_published = random.random() > 0.2
 
-            article = Article.objects.create(
-                title=title,
-                slug=slug,
-                excerpt=fake.paragraph(nb_sentences=2),
-                content="\n\n".join(fake.paragraphs(nb=5)),
-                author=random.choice(users),
-                category=random.choice(categories + [None]),
-                is_published=is_published,
-                view_count=random.randint(0, 5000),
-            )
-            article.tags.set(
-                random.sample(tags, k=random.randint(1, min(4, len(tags))))
-            )
+            defaults = {
+                "title": title,
+                "excerpt": fake.paragraph(nb_sentences=2),
+                "content": "\n\n".join(fake.paragraphs(nb=5)),
+                "author": random.choice(users),
+                "category": random.choice(categories + [None]),
+                "is_published": is_published,
+                "view_count": random.randint(0, 5000),
+            }
+
+            article, created_flag = Article.objects.update_or_create(slug=slug, defaults=defaults)
+            # ensure tags are present (idempotent)
+            article.tags.set(random.sample(tags, k=random.randint(1, min(4, len(tags)))))
             articles.append(article)
 
-        self.stdout.write(self.style.SUCCESS(f"  {count} articles created"))
+        self.stdout.write(self.style.SUCCESS(f"  {count} articles ensured"))
         return articles
 
     def _seed_comments(

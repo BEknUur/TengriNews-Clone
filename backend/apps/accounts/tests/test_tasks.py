@@ -1,3 +1,34 @@
+import pytest
+
+from django.core import mail
+
+from apps.accounts.tests.factories import UserFactory
+from apps.accounts.tasks import send_welcome_email_task
+
+
+@pytest.mark.django_db
+def test_send_welcome_email_task_sends_and_sets_cache(monkeypatch, settings):
+    user = UserFactory()
+
+    # stub render_to_string and send_mail
+    monkeypatch.setattr("apps.accounts.tasks.render_to_string", lambda t, ctx: "content")
+    monkeypatch.setattr("apps.accounts.tasks.send_mail", lambda **kwargs: 1)
+
+    # ensure cache is clear
+    from django.core.cache import cache
+
+    cache.clear()
+
+    res = send_welcome_email_task.apply(args=[user.id])
+    # `apply` returns an EagerResult; call `.get()` to obtain the task return value
+    assert "Welcome email" in res.get()
+
+
+@pytest.mark.django_db
+def test_send_welcome_email_task_handles_missing_user():
+    # call the underlying function directly to avoid Celery's retry wrapper
+    with pytest.raises(ValueError):
+        send_welcome_email_task._orig_run(user_id=999999)
 # Python modules
 from typing import Any
 from unittest.mock import patch

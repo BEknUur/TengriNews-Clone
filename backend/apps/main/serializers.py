@@ -221,15 +221,27 @@ class ReactionSerializer(ModelSerializer):
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         """Validate reaction target and uniqueness constraints per user."""
-        has_article = bool(attrs.get("article"))
-        has_comment = bool(attrs.get("comment"))
+        # Normalize list values produced by QueryDict (e.g. {'type': ['like']})
+        for k in ("type", "article", "comment"):
+            v = attrs.get(k)
+            if isinstance(v, (list, tuple)):
+                if len(v) > 0:
+                    attrs[k] = v[0]
+                else:
+                    attrs.pop(k, None)
+
+        # Allow article/comment to be provided via serializer context (view passed)
+        article = attrs.get("article") or self.context.get("article")
+        comment = attrs.get("comment") or self.context.get("comment")
+        has_article = bool(article)
+        has_comment = bool(comment)
         if has_article == has_comment:
             raise ValidationError("Provide exactly one target: article or comment.")
 
         user = self.context["request"].user
-        if has_article and Reaction.objects.filter(user=user, article=attrs["article"]).exists():
+        if has_article and Reaction.objects.filter(user=user, article=article).exists():
             raise ValidationError("You already reacted to this article.")
-        if has_comment and Reaction.objects.filter(user=user, comment=attrs["comment"]).exists():
+        if has_comment and Reaction.objects.filter(user=user, comment=comment).exists():
             raise ValidationError("You already reacted to this comment.")
         return attrs
 

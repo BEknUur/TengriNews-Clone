@@ -1,3 +1,24 @@
+import pytest
+
+from apps.main.tests.factories import ArticleFactory
+from apps.main.tasks import process_article_content_task
+
+
+@pytest.mark.django_db
+def test_process_article_content_counts_words():
+    art = ArticleFactory(content="This is a test article with several words.")
+    # call task run method (task is bound, so pass None as self)
+    result = process_article_content_task.apply(args=[art.id])
+    res = result.get()
+    assert res["article_id"] == art.id
+    assert res["word_count"] >= 6
+    assert "read_time_minutes" in res
+
+
+@pytest.mark.django_db
+def test_process_article_content_raises_for_missing():
+    with pytest.raises(ValueError):
+        process_article_content_task._orig_run(article_id=999999)
 # Python modules
 from typing import Any
 

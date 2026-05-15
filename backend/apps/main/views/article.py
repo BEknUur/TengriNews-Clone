@@ -284,18 +284,60 @@ class ArticleViewSet(ActionThrottleMixin, ViewSet, DRFResponseMixin, ViewSetWork
         if error_response:
             return error_response
 
-        serializer = self.validate_request_serializer(
-            ReactionSerializer,
-            request=request,
-            data={**request.data, "article": article.pk},
-            context={"request": request},
-        )
+        # Build scalar data explicitly to avoid QueryDict turning single values
+        # into lists (e.g. {'type': ['like']}). Use only the `type` field.
+        raw_type = request.data.get("type")
+        if isinstance(raw_type, (list, tuple)):
+            raw_type = raw_type[0] if raw_type else None
+        data = {"type": raw_type, "article": article.pk}
+        serializer = ReactionSerializer(data=data, context={"request": request})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as exc:
+            try:
+                detail = exc.detail  # DRF ValidationError
+            except Exception:
+                detail = str(exc)
+            logger.warning(
+                "Reaction validation failed user=%s article=%s errors=%s data=%s",
+                getattr(request, "user", None),
+                getattr(article, "pk", None),
+                detail,
+                dict(request.data),
+            )
+            return DRFResponse(
+                {"detail": "validation_error", "errors": detail, "request_data": dict(request.data)},
+                status=HTTP_400_BAD_REQUEST,
+            )
         reaction = serializer.save(user=request.user, article=article)
         return self.serialize_to_response(
             serializer_class=ReactionSerializer,
             instance=reaction,
             status_code=HTTP_201_CREATED,
         )
+
+    @extend_schema(
+        tags=["Articles"],
+        summary="Add a reaction to an article (compat)",
+        description="Compatibility wrapper for /react/ endpoint used by some tests/clients.",
+        request=ReactionSerializer,
+        responses={
+            HTTP_201_CREATED: ReactionSerializer,
+            HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error"),
+            HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Unauthorized"),
+            HTTP_404_NOT_FOUND: OpenApiResponse(description="Article not found"),
+        },
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="react",
+        permission_classes=[IsAuthenticated],
+    )
+    @throttle_scope("reaction")
+    def react(self, request: DRFRequest, pk: str | None = None) -> DRFResponse:
+        """Compatibility wrapper for `/react/` URL used in tests and older clients."""
+        return self.reactions(request, pk=pk)
 
     @extend_schema(
         tags=["Articles"],

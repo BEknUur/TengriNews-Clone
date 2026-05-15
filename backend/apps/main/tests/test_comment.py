@@ -1,5 +1,6 @@
 # Python modules
 from typing import Any
+import json
 
 # Third-party modules
 import pytest
@@ -19,6 +20,15 @@ def comment(db: Any, user: CustomUser, article: Article) -> Comment:
     )
 
 
+def _resp_data(response):
+    if hasattr(response, "data"):
+        return response.data
+    try:
+        return json.loads(response.content.decode())
+    except Exception:
+        return None
+
+
 @pytest.mark.django_db
 class TestCommentViewSet:
     """Tests for CommentViewSet endpoints."""
@@ -31,7 +41,8 @@ class TestCommentViewSet:
     def test_list_returns_list(self, api_client: Any, comment: Comment) -> None:
         """Response body is a plain list."""
         response = api_client.get("/api/comments/")
-        assert isinstance(response.data, list), "Comment list must be a plain list"
+        body = _resp_data(response)
+        assert isinstance(body, list), "Comment list must be a plain list"
 
     def test_retrieve_returns_200(self, api_client: Any, comment: Comment) -> None:
         """GET /api/comments/{id}/ returns 200."""
@@ -49,9 +60,10 @@ class TestCommentViewSet:
         """POST /api/comments/ by authenticated user returns 201."""
         payload = {"article": article.pk, "content": "This is a great read!"}
         response = auth_client.post("/api/comments/", payload)
+        body = _resp_data(response)
         assert (
             response.status_code == 201
-        ), f"Expected 201, got {response.status_code}: {response.data}"
+        ), f"Expected 201, got {response.status_code}: {body}"
 
     def test_create_unauthenticated_returns_401(
         self, api_client: Any, article: Article
@@ -69,9 +81,10 @@ class TestCommentViewSet:
         response = auth_client.patch(
             f"/api/comments/{comment.pk}/", {"content": "Updated content"}
         )
+        body = _resp_data(response)
         assert (
             response.status_code == 200
-        ), f"Expected 200, got {response.status_code}: {response.data}"
+        ), f"Expected 200, got {response.status_code}: {body}"
 
     def test_partial_update_not_found_returns_404(self, auth_client: Any) -> None:
         """PATCH /api/comments/9999/ returns 404."""
@@ -106,6 +119,7 @@ class TestCommentViewSet:
         response = auth_client.post(
             "/api/comments/", {"article": article.pk, "content": content}
         )
+        body = _resp_data(response)
         assert (
             response.status_code == expected_status
-        ), f"content='{content}': expected {expected_status}, got {response.status_code}: {response.data}"
+        ), f"content='{content}': expected {expected_status}, got {response.status_code}: {body}"

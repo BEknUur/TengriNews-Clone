@@ -90,3 +90,11 @@ worker:
 
 beat:
 	cd backend && $(PYTHON) -m celery -A $(APP) beat --loglevel=info
+
+.PHONY: test coverage
+
+test:
+	cd backend && $(PYTHON) -m pytest -q
+
+coverage:
+	cd backend && $(PYTHON) -m pytest --cov=apps --cov-report=term-missing

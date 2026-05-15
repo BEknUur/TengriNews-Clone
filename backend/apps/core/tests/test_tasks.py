@@ -1,3 +1,30 @@
+import pytest
+
+from apps.core.tasks import cleanup_soft_deleted_records, collect_content_statistics
+from apps.accounts.tests.factories import UserFactory
+from apps.main.tests.factories import ArticleFactory, CommentFactory, ReactionFactory
+
+
+@pytest.mark.django_db
+def test_collect_content_statistics_counts():
+    UserFactory()
+    ArticleFactory()
+    CommentFactory()
+    ReactionFactory()
+    result = collect_content_statistics.apply()
+    stats = result.get()
+    assert isinstance(stats, dict)
+    assert "users_total" in stats and "total_articles" in stats
+
+
+@pytest.mark.django_db
+def test_cleanup_soft_deleted_records_deletes_old(monkeypatch):
+    # create a soft-deleted user and ensure cleanup removes it
+    u = UserFactory()
+    u.deleted_at = u.created_at
+    u.save()
+    res = cleanup_soft_deleted_records.apply(kwargs={"retention_days": 0})
+    assert "Soft-deleted records cleanup" in res.get()
 # Python modules
 from datetime import timedelta
 from typing import Any

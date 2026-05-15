@@ -25,3 +25,14 @@ channels-redis>=4.2.1
 python-json-logger>=2.0.2,<3.0
 pytest-xdist>=3.0.0
 aiohttp>=3.9.0
+pytest>=8.0
+pytest-django
+pytest-asyncio
+pytest-cov
+factory-boy
+freezegun
+respx
+httpx
+pytest-mock
+coverage
+faker
