@@ -3,8 +3,6 @@ from types import SimpleNamespace
 from django.test import RequestFactory
 from django.http import HttpResponse
 
-import pytest
-
 from apps.core.locale_middleware import CustomLocaleMiddleware
 
 

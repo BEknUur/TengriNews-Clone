@@ -1,5 +1,12 @@
 import pytest
 
+from datetime import timedelta
+from typing import Any
+
+from django.utils import timezone
+
+from apps.accounts.models import CustomUser
+from apps.main.models import Article, Category
 from apps.core.tasks import cleanup_soft_deleted_records, collect_content_statistics
 from apps.accounts.tests.factories import UserFactory
 from apps.main.tests.factories import ArticleFactory, CommentFactory, ReactionFactory
@@ -25,20 +32,6 @@ def test_cleanup_soft_deleted_records_deletes_old(monkeypatch):
     u.save()
     res = cleanup_soft_deleted_records.apply(kwargs={"retention_days": 0})
     assert "Soft-deleted records cleanup" in res.get()
-# Python modules
-from datetime import timedelta
-from typing import Any
-
-# Django modules
-from django.utils import timezone
-
-# Third-party modules
-import pytest
-
-# Project modules
-from apps.accounts.models import CustomUser
-from apps.core.tasks import cleanup_soft_deleted_records, collect_content_statistics
-from apps.main.models import Article, Category, Comment, Reaction, Tag
 
 
 @pytest.fixture
@@ -122,8 +115,7 @@ class TestCleanupSoftDeletedRecords:
 class TestCollectContentStatistics:
     def test_counts_active_users(self, user: CustomUser) -> None:
         result = collect_content_statistics.apply()
-        stats = result.get()
-        assert stats["users_total"] >= 1
+        assert result.get()["users_total"] >= 1
 
     def test_counts_published_articles_correctly(self, user: CustomUser, category: Category) -> None:
         Article.objects.create(
@@ -161,9 +153,6 @@ class TestCollectContentStatistics:
             is_published=True,
         )
         Article.objects.filter(pk=article.pk).update(deleted_at=timezone.now())
-
-        result = collect_content_statistics.apply()
-        stats = result.get()
 
         # The deleted article should not appear in published count
         published_ids = Article.objects.filter(

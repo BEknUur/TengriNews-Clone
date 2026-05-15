@@ -50,7 +50,7 @@ from apps.main.serializers import (
 )
 from django.conf import settings
 from apps.main.utils.cache import make_article_detail_key, cache_get, cache_set
-from apps.main.utils.cache import make_article_list_key, get_list_version
+from apps.main.utils.cache import make_article_list_key
 
 
 class CategoryViewSet(ViewSet, ViewSetWorkflowMixin):

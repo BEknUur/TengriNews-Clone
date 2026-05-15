@@ -1,5 +1,11 @@
 import pytest
 
+from typing import Any
+
+from django.utils import timezone
+
+from apps.accounts.models import CustomUser
+from apps.main.models import Article, Category
 from apps.main.tests.factories import ArticleFactory
 from apps.main.tasks import process_article_content_task
 
@@ -19,19 +25,6 @@ def test_process_article_content_counts_words():
 def test_process_article_content_raises_for_missing():
     with pytest.raises(ValueError):
         process_article_content_task._orig_run(article_id=999999)
-# Python modules
-from typing import Any
-
-# Django modules
-from django.utils import timezone
-
-# Third-party modules
-import pytest
-
-# Project modules
-from apps.accounts.models import CustomUser
-from apps.main.models import Article, Category
-from apps.main.tasks import process_article_content_task
 
 
 @pytest.fixture

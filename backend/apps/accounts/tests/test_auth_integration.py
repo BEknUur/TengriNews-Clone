@@ -1,7 +1,5 @@
 import pytest
 
-from django.db import transaction
-
 
 @pytest.mark.django_db
 def test_register_triggers_welcome_email(monkeypatch, api_client):
