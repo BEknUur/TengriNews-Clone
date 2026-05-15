@@ -1,7 +1,6 @@
 import pytest
-from django.urls import reverse
 
-from apps.main.tests.factories import ArticleFactory, CommentFactory, TagFactory
+from apps.main.tests.factories import ArticleFactory
 from apps.accounts.tests.factories import UserFactory
 
 
@@ -23,7 +22,7 @@ def test_article_create_allowed_for_authenticated(auth_client, category):
 def test_article_update_only_author_or_editor_or_admin(auth_client, admin_client, user):
     art = ArticleFactory(author=user)
     # another regular user
-    other = UserFactory()
+    UserFactory()
     # auth_client belongs to test user fixture; ensure it's not owner
     resp = auth_client.patch(f"/api/articles/{art.pk}/", {"title": "New"})
     # if auth_client.user != owner then 403; sometimes fixture user is owner - assert one of allowed statuses

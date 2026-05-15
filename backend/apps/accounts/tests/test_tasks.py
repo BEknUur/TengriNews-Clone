@@ -1,7 +1,11 @@
 import pytest
 
-from django.core import mail
+from typing import Any
+from unittest.mock import patch
 
+from django.core.cache import cache
+
+from apps.accounts.models import CustomUser
 from apps.accounts.tests.factories import UserFactory
 from apps.accounts.tasks import send_welcome_email_task
 
@@ -29,19 +33,6 @@ def test_send_welcome_email_task_handles_missing_user():
     # call the underlying function directly to avoid Celery's retry wrapper
     with pytest.raises(ValueError):
         send_welcome_email_task._orig_run(user_id=999999)
-# Python modules
-from typing import Any
-from unittest.mock import patch
-
-# Django modules
-from django.core.cache import cache
-
-# Third-party modules
-import pytest
-
-# Project modules
-from apps.accounts.models import CustomUser
-from apps.accounts.tasks import send_welcome_email_task
 
 
 @pytest.fixture(autouse=True)

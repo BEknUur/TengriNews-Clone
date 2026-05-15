@@ -102,6 +102,38 @@ async def test_async_endpoint_handles_external_error_and_not_cached(monkeypatch)
     CACHES={
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake-2b",
+        },
+        "article_cache": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake-article-2b",
+        },
+    }
+)
+@pytest.mark.django_db
+@pytest.mark.asyncio
+async def test_async_endpoint_handles_unexpected_error(monkeypatch):
+    called = {"count": 0}
+
+    async def fake_fetch_raise(*args, **kwargs):
+        called["count"] += 1
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr('apps.main.views.async_endpoint.fetch_external', fake_fetch_raise)
+
+    client = AsyncClient()
+    url = reverse(URL_NAME)
+
+    resp = await client.get(url, {"q": "unexpected-error"})
+    assert resp.status_code == 502
+    assert resp.json() == {"detail": "external service error"}
+    assert called["count"] == 1
+
+
+@override_settings(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
             "LOCATION": "unique-snowflake-3",
         },
         "article_cache": {

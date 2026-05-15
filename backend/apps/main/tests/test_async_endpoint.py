@@ -1,8 +1,6 @@
 import pytest
 from django.test import override_settings
-from django.urls import reverse
 from rest_framework.test import APIClient
-import asyncio
 
 @pytest.mark.django_db
 @override_settings(

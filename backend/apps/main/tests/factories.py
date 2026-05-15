@@ -1,5 +1,4 @@
 import factory
-import random
 from apps.main.models import (
     Article,
     Category,

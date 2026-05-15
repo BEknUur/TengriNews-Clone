@@ -130,8 +130,8 @@ class TestCategoryListCaching:
             assert mock_qs.all.call_count == first_call_count
 
     def test_cache_invalidated_after_new_category(self, auth_client: APIClient) -> None:
-        r1 = auth_client.get("/api/categories/")
-        assert r1.status_code == 200
+        response = auth_client.get("/api/categories/")
+        assert response.status_code == 200
         v_before = get_version("categories")
 
         Category.objects.create(name="NewCat", slug="new-cat")
@@ -170,7 +170,7 @@ class TestArticleListCaching:
     def test_article_creation_invalidates_list_cache(
         self, auth_client: APIClient, article: Article, user: CustomUser, category: Category
     ) -> None:
-        r1 = auth_client.get("/api/articles/")
+        auth_client.get("/api/articles/")
         v_before = get_version("articles")
 
         Article.objects.create(

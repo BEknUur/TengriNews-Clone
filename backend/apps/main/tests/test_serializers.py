@@ -34,7 +34,7 @@ def test_article_list_get_author_none():
 def test_article_detail_comments_and_reactions_count():
     art = ArticleFactory()
     # create comments and reactions
-    c1 = CommentFactory(article=art)
+    CommentFactory(article=art)
     ReactionFactory(article=art)
     ReactionFactory(article=art)
 

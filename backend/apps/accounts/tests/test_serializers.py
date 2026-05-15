@@ -3,6 +3,7 @@ import pytest
 from rest_framework.exceptions import ValidationError
 
 from apps.accounts.serializers import RegistrationSerializer, LoginSerializer
+from apps.accounts.serializers import UserSerializer
 from apps.accounts.tests.factories import UserFactory
 
 
@@ -89,9 +90,6 @@ def test_login_success(monkeypatch):
     assert serializer.is_valid()
     out = serializer.validated_data
     assert "access" in out and "refresh" in out
-import pytest
-from apps.accounts.tests.factories import UserFactory
-from apps.accounts.serializers import UserSerializer  # путь может отличаться
 
 @pytest.mark.django_db
 def test_user_serializer_basic():

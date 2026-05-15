@@ -1,9 +1,14 @@
+import logging
+
 from django.conf import settings
 from django.http import JsonResponse
-from django.views import View  
-from apps.main.utils.async_client import fetch_external, ExternalAPIError
-from apps.main.utils.cache import make_article_detail_key, cache_get, cache_set 
-import asyncio
+from django.views import View
+
+from apps.main.utils.async_client import ExternalAPIError, fetch_external
+from apps.main.utils.cache import cache_get, cache_set
+
+
+logger = logging.getLogger(__name__)
 
 class ExternalDataView(View):
     async def get(self, request, *args, **kwargs):
@@ -21,17 +26,19 @@ class ExternalDataView(View):
         if cached is not None:
             return JsonResponse(cached, status=200, safe=False)
 
-        url = settings.EXTERNAL_API_URL  
+        url = settings.EXTERNAL_API_URL
         params = {"q": q}
 
         try:
             data = await fetch_external(url, params=params, headers={"Accept": "application/json"})
         except ExternalAPIError as exc:
-            if cached is not None:
-                return JsonResponse(cached, status=200, safe=False)
+            logger.warning("External API failed for query '%s': %s", q, exc)
+            return JsonResponse({"detail": "external service error"}, status=502)
+        except Exception:
+            logger.exception("Unexpected error while fetching external data for query '%s'", q)
             return JsonResponse({"detail": "external service error"}, status=502)
 
-        processed = data  
+        processed = data
 
         try:
             cache_set(cache_key, processed, settings.EXTERNAL_API_TTL)
