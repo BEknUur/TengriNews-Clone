@@ -27,6 +27,8 @@ router.register(r"bookmarks", BookmarkViewSet, basename="bookmarks")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Prefer explicit articles URLs (converted to ordinary views) before the router
+    path("api/articles/", include("apps.main.urls_articles")),
     path("api/", include(router.urls)),
     path("api/accounts/", include("apps.accounts.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
