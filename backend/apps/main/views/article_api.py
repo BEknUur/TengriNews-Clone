@@ -11,6 +11,7 @@ from rest_framework.status import (
     HTTP_201_CREATED,
     HTTP_204_NO_CONTENT,
     HTTP_400_BAD_REQUEST,
+    HTTP_401_UNAUTHORIZED,
     HTTP_404_NOT_FOUND,
 )
 
@@ -48,6 +49,9 @@ class ArticleListCreateView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request: Request):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication credentials were not provided."}, status=HTTP_401_UNAUTHORIZED)
+        
         serializer = ArticleCreateUpdateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         article = serializer.save()
