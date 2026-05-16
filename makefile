@@ -1,11 +1,10 @@
-.PHONY: install run shell \
-superuser \
+.PHONY: install run shell superuser \
 migrations migrate showmigrations seed \
-test test-v \
+test test-v coverage \
 lint lint-fix \
 up down logs build clean all \
 worker beat \
-fe-install fe-dev fe-build
+frontend-install frontend-dev frontend-build
 
 # config
 PYTHON = backend/.venv/bin/python
@@ -60,13 +59,6 @@ clean:
 all:
 	docker compose up --build -d
 
-# tests
-test:
-	cd backend && $(PYTHON) -m pytest
-
-test-v:
-	cd backend && $(PYTHON) -m pytest -v
-
 # lint
 lint:
 	cd backend && $(PYTHON) -m ruff check apps/ settings/
@@ -91,10 +83,11 @@ worker:
 beat:
 	cd backend && $(PYTHON) -m celery -A $(APP) beat --loglevel=info
 
-.PHONY: test coverage
-
 test:
 	cd backend && $(PYTHON) -m pytest -q
+
+test-v:
+	cd backend && $(PYTHON) -m pytest -v
 
 coverage:
 	cd backend && $(PYTHON) -m pytest --cov=apps --cov-report=term-missing

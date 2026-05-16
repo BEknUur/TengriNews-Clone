@@ -2,12 +2,16 @@
 venv/
 .python-version
 __pycache__/
+.DS_Store
 .env
 logs/
 static/
 media/
 db.sqlite3
-localdb.sqlite3.DS_Store
+localdb.sqlite3
 backend/localdb.sqlite3
 celerybeat-schedule
 /nginx/certs/
+.coverage*
+backend/reports/
+backend/.uv-cache/
