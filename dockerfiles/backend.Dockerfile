@@ -4,19 +4,32 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.11 /uv /uvx /bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
-    UV_PYTHON_DOWNLOADS=never
+    UV_PYTHON_DOWNLOADS=never \
+    DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    gcc \
-    libpq-dev \
-    libffi-dev \
-    pkg-config \
-    graphviz \
-    libgraphviz-dev \
-    curl \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+    apt-get update -o Acquire::Retries=5; \
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      gcc \
+      libpq-dev \
+      libffi-dev \
+      pkg-config \
+      graphviz \
+      libgraphviz-dev \
+      curl \
+      ca-certificates \
+    || (apt-get update -o Acquire::Retries=5 && apt-get install -y --no-install-recommends \
+      build-essential \
+      gcc \
+      libpq-dev \
+      libffi-dev \
+      pkg-config \
+      graphviz \
+      graphviz-dev \
+      curl \
+      ca-certificates); \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -36,14 +49,17 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1 \
     TENGRI_ENV_ID=prod \
     PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    curl \
-    gettext \
-    graphviz \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+    apt-get update -o Acquire::Retries=5; \
+    apt-get install -y --no-install-recommends \
+      libpq5 \
+      curl \
+      gettext \
+      graphviz; \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
