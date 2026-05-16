@@ -19,11 +19,12 @@ services:
     build:
       context: .
       dockerfile: dockerfiles/backend.Dockerfile
-    working_dir: /backend
+    working_dir: /app
     volumes:
-      - ./backend:/backend
-      - static_volume:/backend/static
-      - media_volume:/backend/media
+      - ./backend:/app
+      - backend_venv:/app/.venv
+      - static_volume:/app/static
+      - media_volume:/app/media
     ports:
       - "8000:8000"
     env_file:
@@ -31,7 +32,7 @@ services:
     environment:
       REDIS_HOST: redis
 
-      PYTHONPATH: /backend
+      PYTHONPATH: /app
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,12 +43,13 @@ services:
     build:
       context: .
       dockerfile: dockerfiles/backend.Dockerfile
-    working_dir: /backend
+    working_dir: /app
     command: daphne -b 0.0.0.0 -p 8000 settings.asgi:application
     volumes:
-      - static_volume:/backend/static
-      - media_volume:/backend/media
-      - ./backend:/backend
+      - ./backend:/app
+      - backend_venv:/app/.venv
+      - static_volume:/app/static
+      - media_volume:/app/media
     expose:
       - "8000"
     restart: unless-stopped
@@ -55,7 +57,7 @@ services:
       - postgres
       - redis
     environment:
-      PYTHONPATH: /backend
+      PYTHONPATH: /app
 
   redis:
     image: redis:7-alpine
@@ -73,15 +75,16 @@ services:
     build:
       context: .
       dockerfile: dockerfiles/backend.Dockerfile
-    working_dir: /backend
+    working_dir: /app
     command: celery -A settings.celery:app worker --loglevel=info
     volumes:
-      - ./backend:/backend
+      - ./backend:/app
+      - backend_venv:/app/.venv
     env_file:
       - .env
     environment:
       REDIS_HOST: redis
-      PYTHONPATH: /backend
+      PYTHONPATH: /app
     depends_on:
       redis:
         condition: service_healthy
@@ -92,16 +95,16 @@ services:
     build:
       context: .
       dockerfile: dockerfiles/backend.Dockerfile
-    working_dir: /backend
-    # Remove possibly corrupted schedule DB before starting beat
-    command: sh -c "rm -f /backend/celerybeat-schedule && celery -A settings.celery:app beat --loglevel=info"
+    working_dir: /app
+    command: sh -c "rm -f /app/celerybeat-schedule && celery -A settings.celery:app beat --loglevel=info"
     volumes:
-      - ./backend:/backend
+      - ./backend:/app
+      - backend_venv:/app/.venv
     env_file:
       - .env
     environment:
       REDIS_HOST: redis
-      PYTHONPATH: /backend
+      PYTHONPATH: /app
     depends_on:
       redis:
         condition: service_healthy
@@ -138,3 +141,4 @@ volumes:
   pgdata:
   static_volume:
   media_volume:
+  backend_venv:

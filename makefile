@@ -15,7 +15,7 @@ APP = settings.celery:app
 
 # install
 install:
-	cd backend && $(UV) pip install -e .
+	cd backend && $(UV) sync --all-groups
 
 # django
 run:

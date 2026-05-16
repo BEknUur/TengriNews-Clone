@@ -14,18 +14,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install ruff
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --frozen --group dev
 
       - name: Run ruff
-        run: |
-          ruff check backend/apps backend/settings
+        working-directory: backend
+        run: uv run ruff check apps settings
 
   test:
     name: Tests (pytest)
@@ -54,7 +57,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -68,13 +75,8 @@ jobs:
             libpq-dev
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-
-          if [ -f backend/requirements-dev.txt ]; then
-            pip install -r backend/requirements-dev.txt
-          fi
+        working-directory: backend
+        run: uv sync --frozen --all-groups
 
       - name: Wait for Postgres
         run: |
@@ -83,8 +85,9 @@ jobs:
           done
 
       - name: Run tests
+        working-directory: backend
         env:
-          PYTHONPATH: backend
+          PYTHONPATH: .
           DJANGO_SETTINGS_MODULE: settings.env.test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -93,11 +96,8 @@ jobs:
           POSTGRES_PORT: 5432
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-
         run: |
-          cd backend
-
-          pytest \
+          uv run pytest \
             -q \
             --maxfail=1 \
             --disable-warnings \
