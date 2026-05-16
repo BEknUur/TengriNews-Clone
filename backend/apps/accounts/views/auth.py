@@ -30,7 +30,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from apps.core.decorators import validate_serializer_data
 from apps.core.mixins import DRFResponseMixin
 from apps.core.throttling import CustomAnonRateThrottle, CustomUserRateThrottle
-from apps.accounts.schema_serializers import (
+from backend.apps.accounts.serailizers.schema_serializers import (
     AccessTokenResponseSerializer,
     LoginRequestSerializer,
     RefreshTokenRequestSerializer,
@@ -38,7 +38,7 @@ from apps.accounts.schema_serializers import (
     RegisterResponseSerializer,
     TokenPairResponseSerializer,
 )
-from apps.accounts.serializers import LoginSerializer, RegistrationSerializer
+from backend.apps.accounts.serailizers.serializers import LoginSerializer, RegistrationSerializer
 from apps.accounts.tasks import send_welcome_email_task
 
 logger = logging.getLogger(__name__)

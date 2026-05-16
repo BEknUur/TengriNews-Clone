@@ -12,7 +12,7 @@ from apps.accounts.models import CustomUser
 class TestAuthViewSet:
     """Tests for AuthViewSet endpoints."""
 
-    # ─── Register ────────────────────────────────────────────────────────────
+   
 
     def test_register_returns_201(self, api_client: Any) -> None:
         """POST /api/accounts/auth/register/ returns 201."""
@@ -44,8 +44,7 @@ class TestAuthViewSet:
             response.status_code == 400
         ), f"Expected 400 for duplicate email, got {response.status_code}"
 
-    # ─── Login ────────────────────────────────────────────────────────────────
-
+ 
     def test_login_returns_200_with_tokens(self, api_client: Any, user: CustomUser) -> None:
         """POST /api/accounts/auth/token/ returns 200 with access token."""
         payload = {"email": "testuser@example.com", "password": "testpass123"}
@@ -90,8 +89,7 @@ class TestAuthViewSet:
             response.status_code == expected_status
         ), f"email={email}: expected {expected_status}, got {response.status_code}"
 
-    # ─── Token Refresh ────────────────────────────────────────────────────────
-
+  
     def test_token_refresh_returns_200(self, api_client: Any, user: CustomUser) -> None:
         """POST /api/accounts/auth/token/refresh/ returns 200 with new access."""
         login_response = api_client.post(
