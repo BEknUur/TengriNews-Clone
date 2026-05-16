@@ -1,8 +1,5 @@
 version: "3.8"
 
-# Overlay compose file to run the app under Daphne (ASGI) and put Nginx in front.
-# Usage: docker compose -f docker-compose.yml -f docker-compose.nginx.yml up --build
-
 services:
   app:
     image: tengrinews-backend:local

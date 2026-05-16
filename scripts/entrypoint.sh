@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Entrypoint для Docker-контейнера Django
-# Поведение:
-# - Пытается выполнить миграции повторно до успешного выполнения (с таймаутом)
-# - Опционально собирает статику при COLLECT_STATIC=1
-# - Выполняет переданную команду (exec "$@")
 
 MAX_TRIES=${MAX_TRIES:-30}
 SLEEP_INTERVAL=${SLEEP_INTERVAL:-2}

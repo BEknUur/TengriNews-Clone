@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Generate a self-signed certificate for development (CN=localhost)
+
 OUT_DIR="./nginx/certs"
 mkdir -p "$OUT_DIR"
 
