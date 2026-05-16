@@ -16,7 +16,14 @@ Path configurations
 """
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-os.makedirs(os.path.join(BASE_DIR, "logs"), exist_ok=True)
+DEFAULT_LOG_DIR = os.path.join(BASE_DIR, "logs")
+LOG_DIR = os.getenv("DJANGO_LOG_DIR", DEFAULT_LOG_DIR)
+
+try:
+    os.makedirs(LOG_DIR, exist_ok=True)
+except OSError:
+    LOG_DIR = "/tmp/tengri-logs"
+    os.makedirs(LOG_DIR, exist_ok=True)
 ROOT_URLCONF = "settings.urls"
 WSGI_APPLICATION = "settings.wsgi.application"
 ASGI_APPLICATION = "settings.asgi.application"
@@ -101,7 +108,7 @@ LOGGING = {
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "WARNING",
-            "filename": "logs/app.log",
+            "filename": os.path.join(LOG_DIR, "app.log"),
             "maxBytes": 5 * 1024 * 1024,  # 5 MB
             "backupCount": 5,
             "formatter": "verbose",
@@ -110,7 +117,7 @@ LOGGING = {
         "debug_only": {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "DEBUG",
-            "filename": "logs/debug.log",
+            "filename": os.path.join(LOG_DIR, "debug.log"),
             "maxBytes": 5 * 1024 * 1024,  # 5 MB
             "backupCount": 3,
             "formatter": "verbose",
@@ -120,7 +127,7 @@ LOGGING = {
         "request_json_file": {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "INFO",
-            "filename": "logs/requests.jsonl",
+            "filename": os.path.join(LOG_DIR, "requests.jsonl"),
             "maxBytes": 5 * 1024 * 1024,  # 5 MB
             "backupCount": 5,
             "formatter": "json",

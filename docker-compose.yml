@@ -48,6 +48,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       PYTHONPATH: /app
+      DJANGO_LOG_DIR: /tmp/tengri-logs
       POSTGRESQL_URL: ${POSTGRESQL_URL:-postgres://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@postgres:5432/${POSTGRES_DB:-mydatabase}}
       COLLECT_STATIC: ${COLLECT_STATIC:-0}
     volumes:
@@ -85,6 +86,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       PYTHONPATH: /app
+      DJANGO_LOG_DIR: /tmp/tengri-logs
       POSTGRESQL_URL: ${POSTGRESQL_URL:-postgres://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@postgres:5432/${POSTGRES_DB:-mydatabase}}
       COLLECT_STATIC: 0
     volumes:
@@ -114,6 +116,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       PYTHONPATH: /app
+      DJANGO_LOG_DIR: /tmp/tengri-logs
       POSTGRESQL_URL: ${POSTGRESQL_URL:-postgres://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@postgres:5432/${POSTGRES_DB:-mydatabase}}
       COLLECT_STATIC: 0
     volumes:
