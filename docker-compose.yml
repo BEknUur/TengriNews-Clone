@@ -49,6 +49,9 @@ services:
       REDIS_PORT: 6379
       PYTHONPATH: /app
       DJANGO_LOG_DIR: /tmp/tengri-logs
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,212.109.223.106}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://127.0.0.1,http://212.109.223.106:81}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost,http://127.0.0.1,http://212.109.223.106:81}
       POSTGRESQL_URL: ${POSTGRESQL_URL:-postgres://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@postgres:5432/${POSTGRES_DB:-mydatabase}}
       COLLECT_STATIC: ${COLLECT_STATIC:-0}
     volumes:
@@ -87,6 +90,9 @@ services:
       REDIS_PORT: 6379
       PYTHONPATH: /app
       DJANGO_LOG_DIR: /tmp/tengri-logs
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,212.109.223.106}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://127.0.0.1,http://212.109.223.106:81}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost,http://127.0.0.1,http://212.109.223.106:81}
       POSTGRESQL_URL: ${POSTGRESQL_URL:-postgres://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@postgres:5432/${POSTGRES_DB:-mydatabase}}
       COLLECT_STATIC: 0
     volumes:
@@ -108,7 +114,7 @@ services:
       context: .
       dockerfile: dockerfiles/backend.Dockerfile
     restart: unless-stopped
-    command: sh -c "rm -f /app/celerybeat-schedule && celery -A settings.celery:app beat --loglevel=info"
+    command: celery -A settings.celery:app beat --loglevel=info --schedule=/tmp/celerybeat-schedule
     env_file:
       - .env
     environment:
@@ -117,6 +123,9 @@ services:
       REDIS_PORT: 6379
       PYTHONPATH: /app
       DJANGO_LOG_DIR: /tmp/tengri-logs
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,212.109.223.106}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://127.0.0.1,http://212.109.223.106:81}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost,http://127.0.0.1,http://212.109.223.106:81}
       POSTGRESQL_URL: ${POSTGRESQL_URL:-postgres://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@postgres:5432/${POSTGRES_DB:-mydatabase}}
       COLLECT_STATIC: 0
     volumes:
