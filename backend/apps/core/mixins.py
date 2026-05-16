@@ -58,7 +58,7 @@ class ViewSetWorkflowMixin:
             response_data = {"detail": "Not found."}
         try:
             return queryset.get(**lookup), None
-        except queryset.model.DoesNotExist:
+        except (queryset.model.DoesNotExist, ValueError, TypeError):
             return None, DRFResponse(response_data, status=status_code)
 
     def validate_request_serializer(

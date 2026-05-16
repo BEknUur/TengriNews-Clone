@@ -1,23 +1,21 @@
-.PHONY: install run shell superuser \
+.PHONY: install run shell \
+superuser \
 migrations migrate showmigrations seed \
+erd \
 test test-v coverage \
 lint lint-fix \
 up down logs build clean all \
 worker beat \
 frontend-install frontend-dev frontend-build
 
-# config
-PYTHON = backend/.venv/bin/python
+PYTHON = .venv/bin/python
 UV = uv
-MANAGE = $(PYTHON) backend/manage.py
 SETTINGS = settings.env.local
 APP = settings.celery:app
 
-# install
 install:
 	cd backend && $(UV) sync --all-groups
 
-# django
 run:
 	cd backend && $(PYTHON) manage.py runserver --settings=$(SETTINGS)
 
@@ -27,7 +25,6 @@ shell:
 superuser:
 	cd backend && $(PYTHON) manage.py createsuperuser --settings=$(SETTINGS)
 
-# migrations
 migrations:
 	cd backend && $(PYTHON) manage.py makemigrations --settings=$(SETTINGS)
 
@@ -40,7 +37,9 @@ showmigrations:
 seed:
 	cd backend && $(PYTHON) manage.py seed_data --settings=$(SETTINGS)
 
-# docker
+erd:
+	docker compose run --rm backend python manage.py graph_models -a -g -o /app/er_diagram.png --settings=$(SETTINGS)
+
 build:
 	docker compose build
 
@@ -59,14 +58,12 @@ clean:
 all:
 	docker compose up --build -d
 
-# lint
 lint:
 	cd backend && $(PYTHON) -m ruff check apps/ settings/
 
 lint-fix:
 	cd backend && $(PYTHON) -m ruff check --fix apps/ settings/
 
-# frontend
 frontend-install:
 	cd frontend && npm install
 
@@ -76,7 +73,6 @@ frontend-dev:
 frontend-build:
 	cd frontend && npm run build
 
-# celery
 worker:
 	cd backend && $(PYTHON) -m celery -A $(APP) worker --loglevel=info
 

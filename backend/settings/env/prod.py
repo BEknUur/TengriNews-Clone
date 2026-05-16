@@ -13,6 +13,8 @@ ALLOWED_HOSTS: list[str] = [
     "localhost:8000",
     "localhost",
     "localhost:5173",
+    "127.0.0.1",
+    "127.0.0.1:8000",
 ]
 
 DATABASES: dict = {

@@ -15,3 +15,5 @@ celerybeat-schedule
 .coverage*
 backend/reports/
 backend/.uv-cache/
+
+*.egg-info/

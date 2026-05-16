@@ -26,12 +26,12 @@ from apps.core.decorators import require_permissions
 from apps.core.mixins import ViewSetWorkflowMixin
 from apps.core.throttling import ActionThrottleMixin
 from apps.accounts.models import CustomUser
-from apps.accounts.serailizers.schema_serializers import (
+from apps.accounts.serializers.schema_serializers import (
     UserCreateRequestSerializer,
     UserPatchRequestSerializer,
     UserResponseSerializer,
 )
-from apps.accounts.serailizers.serializers import UserSerializer, UserUpdateSerializer
+from apps.accounts.serializers.serializers import UserSerializer, UserUpdateSerializer
 
 
 @extend_schema_view(

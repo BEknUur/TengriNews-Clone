@@ -1,5 +1,6 @@
 # Django modules
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from apps.main.views.async_endpoint import ExternalDataView
 
@@ -26,6 +27,7 @@ router.register(r"reactions", ReactionViewSet, basename="reactions")
 router.register(r"bookmarks", BookmarkViewSet, basename="bookmarks")
 
 urlpatterns = [
+    path("healthz", lambda r: JsonResponse({"status": "ok"})),
     path("admin/", admin.site.urls),
     # Prefer explicit articles URLs (converted to ordinary views) before the router
     path("api/articles/", include("apps.main.urls_articles")),

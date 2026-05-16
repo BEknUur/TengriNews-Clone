@@ -7,14 +7,11 @@ Enhancements in this version:
 - idempotent article creation/update (update_or_create by slug)
 """
 
-# Python modules
 import random
-import sys
-from typing import Any
+from argparse import ArgumentParser
 
-# Django modules
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils.text import slugify
 
@@ -33,7 +30,7 @@ class Command(BaseCommand):
 
     help = "Seed the database with demo data (safe, idempotent-ish)."
 
-    def add_arguments(self, parser: Any) -> Any:
+    def add_arguments(self, parser: ArgumentParser) -> None:
         """Register custom CLI arguments for this management command."""
         parser.add_argument("--users", type=int, default=10)
         parser.add_argument("--categories", type=int, default=6)
@@ -45,31 +42,29 @@ class Command(BaseCommand):
         parser.add_argument("--force", action="store_true", help="Force run even when DEBUG is False")
 
     @transaction.atomic
-    def handle(self, *args: Any, **options: Any) -> Any:
+    def handle(self, *args: object, **options: object) -> None:
         """Execute the management command workflow using parsed options."""
-        # Production guard
-        if not settings.DEBUG and not options.get("force"):
-            self.stderr.write("Refusing to run seed in non-debug environment. Use --force to override.")
-            sys.exit(1)
+        if not settings.DEBUG and not bool(options.get("force")):
+            raise CommandError("Refusing to run seed in non-debug environment. Use --force to override.")
 
-        if options.get("clear"):
-            if not options.get("noinput") and not options.get("force"):
+        if bool(options.get("clear")):
+            if not bool(options.get("noinput")) and not bool(options.get("force")):
                 confirm = input("This will DELETE seeded data. Type 'yes' to continue: ")
                 if confirm.lower() != "yes":
                     self.stdout.write("Aborted.")
                     return
             self._clear()
 
-        users = self._seed_users(options["users"])
-        categories = self._seed_categories(options["categories"])
-        tags = self._seed_tags(options["tags"])
-        articles = self._seed_articles(options["articles"], users, categories, tags)
-        self._seed_comments(options["comments"], articles, users)
+        users = self._seed_users(int(options["users"]))
+        categories = self._seed_categories(int(options["categories"]))
+        tags = self._seed_tags(int(options["tags"]))
+        articles = self._seed_articles(int(options["articles"]), users, categories, tags)
+        self._seed_comments(int(options["comments"]), articles, users)
         self._seed_reactions(articles, users)
 
         self.stdout.write(self.style.SUCCESS("\nSeed complete!"))
 
-    def _clear(self) -> Any:
+    def _clear(self) -> None:
         """Run the internal helper that handles clear."""
         Reaction.objects.all().delete()
         Comment.objects.all().delete()
@@ -122,7 +117,7 @@ class Command(BaseCommand):
                 created += 1
             users.append(user)
 
-        self.stdout.write(self.style.SUCCESS(f"  {count + 1} users ensured ({created} created)") )
+        self.stdout.write(self.style.SUCCESS(f"  {count + 1} users ensured ({created} created)"))
         return users
 
     def _seed_categories(self, count: int) -> list[Category]:
@@ -142,7 +137,7 @@ class Command(BaseCommand):
 
         for name in base_names[:count]:
             slug = slugify(name) or fake.slug()
-            cat, _ = Category.objects.get_or_create(slug=slug, defaults={"name": name})
+            cat, _ = Category.objects.get_or_create(name=name, defaults={"slug": slug})
             categories.append(cat)
 
         if len(categories) >= 2:
@@ -150,8 +145,8 @@ class Command(BaseCommand):
             for child_name in child_names:
                 slug = slugify(child_name) or fake.slug()
                 child, _ = Category.objects.get_or_create(
-                    slug=slug,
-                    defaults={"name": child_name, "parent": random.choice(categories)},
+                    name=child_name,
+                    defaults={"slug": slug, "parent": random.choice(categories)},
                 )
                 categories.append(child)
 
@@ -168,7 +163,7 @@ class Command(BaseCommand):
         tags = []
         for name in tag_names:
             slug = slugify(name) or fake.slug()
-            tag, _ = Tag.objects.get_or_create(slug=slug, defaults={"name": name})
+            tag, _ = Tag.objects.get_or_create(name=name, defaults={"slug": slug})
             tags.append(tag)
 
         self.stdout.write(self.style.SUCCESS(f"  {len(tags)} tags created"))
@@ -203,7 +198,7 @@ class Command(BaseCommand):
                 "view_count": random.randint(0, 5000),
             }
 
-            article, created_flag = Article.objects.update_or_create(slug=slug, defaults=defaults)
+            article, _ = Article.objects.update_or_create(slug=slug, defaults=defaults)
             # ensure tags are present (idempotent)
             article.tags.set(random.sample(tags, k=random.randint(1, min(4, len(tags)))))
             articles.append(article)
