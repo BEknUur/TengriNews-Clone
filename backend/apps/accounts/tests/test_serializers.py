@@ -2,8 +2,8 @@ import pytest
 
 from rest_framework.exceptions import ValidationError
 
-from backend.apps.accounts.serailizers.serializers import RegistrationSerializer, LoginSerializer
-from backend.apps.accounts.serailizers.serializers import UserSerializer
+from apps.accounts.serailizers.serializers import RegistrationSerializer, LoginSerializer
+from apps.accounts.serailizers.serializers import UserSerializer
 from apps.accounts.tests.factories import UserFactory
 
 
